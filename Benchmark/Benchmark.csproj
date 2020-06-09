@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>7.2</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AgileObjects.AgileMapper" Version="1.6.0" />
+    <PackageReference Include="AutoFixture" Version="4.11.0" />
+    <PackageReference Include="AutoMapper" Version="9.0.0" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
+    <PackageReference Include="Dream.Mapper" Version="4.0.0" />
+    <PackageReference Include="EmitMapperCore" Version="1.0.1" />
+    <PackageReference Include="ExpressionDebugger" Version="2.1.2" />
+    <PackageReference Include="HolopaMir.ExpressMapper" Version="2.0.0" />
+    <PackageReference Include="Mapster" Version="5.3.1" />
+    <PackageReference Include="TinyMapper" Version="3.0.3" />
+    <PackageReference Include="ValueInjecter" Version="3.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Air.Mapper\Air.Mapper.csproj" />
+  </ItemGroup>
+
+</Project>

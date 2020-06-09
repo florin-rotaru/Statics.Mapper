@@ -1,0 +1,75 @@
+﻿using Air.Mapper;
+using AutoFixture;
+using Models;
+using System;
+using System.Linq;
+using Xunit;
+using Xunit.Abstractions;
+using static Air.Compare.Members;
+
+namespace Playground
+{
+    public class Types
+    {
+        private readonly ITestOutputHelper Console;
+
+        private Fixture Fixture { get; }
+
+        public Types(ITestOutputHelper console)
+        {
+            Console = console;
+            Fixture = new Fixture();
+            Fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList()
+                .ForEach(b => Fixture.Behaviors.Remove(b));
+            Fixture.Behaviors.Add(new OmitOnRecursionBehavior());
+
+            var customization = new SupportMutableValueTypesCustomization();
+            customization.Customize(Fixture);
+        }
+
+
+        [Fact]
+        public void FromNonBuiltInToBuiltInStruct()
+        {
+            Assert.Throws<NotSupportedException>(() => { Mapper<TC0_I0_Members, int>.CompileActionRef(); });
+            Assert.Throws<NotSupportedException>(() => { Mapper<TC0_I0_Members, int>.CompileFunc(); });
+        }
+
+        [Fact]
+        public void FromNonBuiltInToNullableBuiltInStruct()
+        {
+            Assert.Throws<NotSupportedException>(() => { Mapper<TC0_I0_Members, int?>.CompileActionRef(); });
+            Assert.Throws<NotSupportedException>(() => { Mapper<TC0_I0_Members, int?>.CompileFunc(); });
+        }
+
+        [Fact]
+        public void FromInterface()
+        {
+            var source = Fixture.Create<TInterfaceA>();
+            var map = Mapper<IInterface, TInterfaceB>.CompileFunc();
+            var destination = map(source);
+            Assert.True(CompareEquals(source, destination));
+        }
+
+        [Fact]
+        public void ToInterface()
+        {
+            Assert.Throws<NotSupportedException>(() => { Mapper<TInterfaceA, IInterface>.CompileFunc(); });
+        }
+
+        [Fact]
+        public void FromAbstract()
+        {
+            var source = Fixture.Create<TAbstractA>();
+            var map = Mapper<TAbstract, TAbstractB>.CompileFunc();
+            var destination = map(source);
+            Assert.True(CompareEquals(source, destination));
+        }
+
+        [Fact]
+        public void ToAbstract()
+        {
+            Assert.Throws<NotSupportedException>(() => { Mapper<TAbstractA, TAbstract>.CompileFunc(); });
+        }
+    }
+}
