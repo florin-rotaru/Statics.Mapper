@@ -2,6 +2,7 @@
 using AutoFixture;
 using Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,6 +28,46 @@ namespace Playground
             customization.Customize(Fixture);
         }
 
+        TNode GetRecursiveNode(int recursion)
+        {
+            return new TNode
+            {
+                Name = Fixture.Create<string>(),
+                ChildNodes = recursion > 0 ? new List<TNode>
+                    {
+                        GetRecursiveNode(recursion - 1),
+                        GetRecursiveNode(recursion - 1),
+                        GetRecursiveNode(recursion - 1)
+                    } : new List<TNode>(),
+                ParentNode = recursion > 0 ? new TNode
+                {
+                    ChildNodes = recursion > 0 ? new List<TNode>
+                    {
+                        GetRecursiveNode(recursion - 1),
+                        GetRecursiveNode(recursion - 1),
+                        GetRecursiveNode(recursion - 1)
+                    } : new List<TNode>(),
+                    ParentNode = recursion > 0 ? GetRecursiveNode(recursion - 1) : new TNode()
+                } : new TNode()
+            };
+        }
+
+        [Fact]
+        public void Nodes()
+        {
+            var source = GetRecursiveNode(2);
+
+            var map = Mapper<TNode, TNode>.CompileFunc();
+            var destination = map(source);
+
+            Assert.True(CompareEquals(source, destination));
+
+            map = Mapper<TNode, TNode>.CompileFunc(o => o
+                .Map(s => s.ParentNode, d => d.ParentNode));
+            destination = map(source);
+
+            Assert.True(CompareEquals(source, destination));
+        }
 
         [Fact]
         public void FromNonBuiltInToBuiltInStruct()

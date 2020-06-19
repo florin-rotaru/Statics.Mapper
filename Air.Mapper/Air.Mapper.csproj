@@ -12,12 +12,13 @@
 	<LangVersion>7.2</LangVersion>
 	<Description>Simple and fast open source mapping library which allows to map one type members into another. Maps members based on conventions (public properties with the same names and same/derived/convertible types), compiles func / action delegates mappers</Description>
 	<PackageTags>mapper</PackageTags>
+	<RepositoryUrl>https://github.com/florin-rotaru/Air.Mapper</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <None Include="LICENSE" Pack="true" PackagePath="" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Air.Reflection" Version="1.0.2" />
+    <PackageReference Include="Air.Reflection" Version="2.0.3" />
   </ItemGroup>
 
 </Project>

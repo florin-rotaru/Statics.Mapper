@@ -66,7 +66,7 @@ namespace Internal
 
             if (Nullable.GetUnderlyingType(typeof(D)) != null)
                 Assert.Null(destination);
-            if (typeof(D).IsValueType)
+            else if (typeof(D).IsValueType)
                 Assert.True(CompareEquals(new D(), destination));
             else
                 Assert.Null(destination);
@@ -363,21 +363,7 @@ namespace Internal
         {
             // =======
             S[] source = NewSourceArray();
-            D[] destination = new D[source.Length];
-            Mapper<S, D>.ToArray(source, ref destination);
-            AssertEqualsOrDefault(source, destination, hasReadonlyMembers, hasStaticMembers);
-
-            destination = default;
-            Mapper<S, D>.ToArray(source, ref destination);
-            AssertEqualsOrDefault(source, destination, hasReadonlyMembers, hasStaticMembers);
-
-            source = new S[] { };
-            Mapper<S, D>.ToArray(source, ref destination);
-            Assert.NotEmpty(destination);
-
-            // =======
-            source = NewSourceArray();
-            destination = Mapper<S, D>.ToArray(source);
+            D[] destination = Mapper<S, D>.ToArray(source);
             AssertEqualsOrDefault(source, destination, hasReadonlyMembers, hasStaticMembers);
 
             source = new S[] { };

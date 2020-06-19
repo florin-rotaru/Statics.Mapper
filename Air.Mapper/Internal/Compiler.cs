@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
 
 namespace Air.Mapper.Internal
 {
@@ -17,6 +16,7 @@ namespace Air.Mapper.Internal
 
         private protected const string Value = nameof(Value);
         private protected const string HasValue = nameof(HasValue);
+        private protected const string To = nameof(To);
         private protected const string ToArray = nameof(ToArray);
         private protected const char DOT = '.';
 
@@ -42,7 +42,7 @@ namespace Air.Mapper.Internal
             if (Source.IsBuiltIn != Destination.IsBuiltIn)
                 throw new NotSupportedException($"Mapping from {Source.Type} to {Destination.Type} not supported.");
 
-            if (Source.IsBuiltIn && Destination.IsBuiltIn && !Reflection.Emit.ILGenerator.CanEmitSetOrConvert(Source.Type, Destination.Type))
+            if (Source.IsBuiltIn && Destination.IsBuiltIn && !Reflection.Emit.ILGenerator.CanEmitConvert(Source.Type, Destination.Type))
                 throw new NotSupportedException($"Cannot convert from {Source.Type} to {Destination.Type}.");
 
             if (Destination.Type.IsInterface && Source.Type != Destination.Type)
@@ -114,29 +114,32 @@ namespace Air.Mapper.Internal
 
         #region Locals
 
+        private void DeclareSourceNodeLocals(SourceNode sourceNode)
+        {
+            if (sourceNode.Local != null ||
+                sourceNode.NullableLocal != null)
+                return;
+
+            if (sourceNode.NullableUnderlyingType != null)
+            {
+                if (StructRequired(sourceNode))
+                    sourceNode.Local = IL.DeclareLocal(sourceNode.NullableUnderlyingType);
+
+                if (sourceNode.Depth != 0)
+                    sourceNode.NullableLocal = IL.DeclareLocal(sourceNode.Type);
+
+            }
+            else if (sourceNode.Type.IsValueType && sourceNode.Depth != 0)
+            {
+                if (StructRequired(sourceNode))
+                    sourceNode.Local = IL.DeclareLocal(sourceNode.Type);
+            }
+        }
+
         private void DeclareSourceNodesLocals(List<SourceNode> sourceNodes)
         {
             for (int i = 0; i < sourceNodes.Count; i++)
-            {
-                if (sourceNodes[i].Local != null ||
-                    sourceNodes[i].NullableLocal != null)
-                    continue;
-
-                if (sourceNodes[i].NullableUnderlyingType != null)
-                {
-                    if (StructRequired(sourceNodes[i]))
-                        sourceNodes[i].Local = IL.DeclareLocal(sourceNodes[i].NullableUnderlyingType);
-
-                    if (sourceNodes[i].Depth != 0)
-                        sourceNodes[i].NullableLocal = IL.DeclareLocal(sourceNodes[i].Type);
-
-                }
-                else if (sourceNodes[i].Type.IsValueType && sourceNodes[i].Depth != 0)
-                {
-                    if (StructRequired(sourceNodes[i]))
-                        sourceNodes[i].Local = IL.DeclareLocal(sourceNodes[i].Type);
-                }
-            }
+                DeclareSourceNodeLocals(sourceNodes[i]);
         }
 
         private void DeclareDestinationNodeLocals(DestinationNode destinationNode)
@@ -184,19 +187,6 @@ namespace Air.Mapper.Internal
                     }
                 }
             }
-
-            if (!destinationNode.UseMapper)
-                DeclareDestinationNodeMembersLocals(destinationNode);
-        }
-
-        private protected void DeclareDestinationNodeMembersLocals(DestinationNode destinationNode)
-        {
-            if (Method.ReturnType != typeof(void))
-                return;
-
-            for (int i = 0; i < destinationNode.Members.Count; i++)
-                if (destinationNode.Members[i].IsCollection && destinationNode.Members[i].Map)
-                    destinationNode.Members[i].Local = IL.DeclareLocal(CollectionDestinationType(destinationNode.Members[i].Info.Type));
         }
 
         private bool UseDestinationLocals() =>
@@ -207,15 +197,14 @@ namespace Air.Mapper.Internal
             if (!UseDestinationLocals())
                 return;
 
-            for (int i = 0; i < Schema.DestinationNodes.Count; i++)
-            {
-                if (!Schema.DestinationNodes[i].Load)
-                    continue;
-
-                DeclareDestinationNodeLocals(Schema.DestinationNodes[i]);
-                DeclareSourceNodesLocals(
-                    GetDestinationNodeSources(Schema.DestinationNodes[i]));
-            }
+            Schema.ForEachDestinationNode(
+                n => n.Load,
+                n =>
+                {
+                    DeclareDestinationNodeLocals(n);
+                    DeclareSourceNodesLocals(
+                        GetDestinationNodeSources(n));
+                });
         }
 
         private protected void InitDestinationLocals()
@@ -223,18 +212,18 @@ namespace Air.Mapper.Internal
             if (!UseDestinationLocals())
                 return;
 
-            foreach (DestinationNode destinationNode in Schema.DestinationNodes)
-            {
-                if (!destinationNode.Load ||
-                    !destinationNode.Type.IsValueType ||
-                    destinationNode.UseMapper ||
-                    destinationNode.Local == null ||
-                    destinationNode.Depth == 0)
-                    continue;
-
-                IL.EmitLdloca(destinationNode.Local.LocalIndex);
-                IL.EmitInit(destinationNode.Local.LocalType);
-            }
+            Schema.ForEachDestinationNode(n =>
+                n.Load &&
+                n.Type.IsValueType &&
+                !n.UseMapper &&
+                n.Local != null &&
+                n.Depth != 0,
+                n =>
+                {
+                    IL.EmitInit(n.Local);
+                    //IL.EmitLdloca(n.Local.LocalIndex);
+                    //IL.EmitInit(n.Local.LocalType);
+                });
         }
 
         #endregion
@@ -393,9 +382,6 @@ namespace Air.Mapper.Internal
                 IL.EmitLoadMemberValue(Schema.GetMember(string.Join(DOT, segments, 0, i + 1), Schema.DestinationNodes));
         }
 
-        private void Load(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember)
-            => Load(destinationNode, destinationNodeMember.Info);
-
         private void Load(DestinationNode destinationNode, Reflection.MemberInfo destinationNodeMember)
         {
             if (!destinationNodeMember.IsStatic)
@@ -403,6 +389,9 @@ namespace Air.Mapper.Internal
 
             IL.EmitLoadMemberValue(destinationNodeMember);
         }
+
+        private void Load(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember) =>
+            Load(destinationNode, destinationNodeMember.Info);
 
         #endregion
 
@@ -513,26 +502,6 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private void LoadAndSetCollection(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember)
-        {
-            if (Schema.CanLoadAndSetCollectionValue(destinationNodeMember.SourceNodeMember, destinationNodeMember.Info))
-            {
-                MapperMapCollection(destinationNode, destinationNodeMember);
-                return;
-            }
-
-            IL.EmitLoadAndSetValue(
-                () =>
-                {
-                    if (!destinationNodeMember.Info.IsStatic)
-                        Load(destinationNode);
-
-                    Load(destinationNodeMember.SourceNode, destinationNodeMember.SourceNodeMember);
-                },
-                destinationNodeMember.SourceNodeMember,
-                destinationNodeMember.Info);
-        }
-
         private void LoadAndSetDestinationNodeMembers(DestinationNode destinationNode, List<DestinationNodeMember> destinationNodeMembers)
         {
             foreach (DestinationNodeMember destinationNodeMember in destinationNodeMembers)
@@ -552,237 +521,145 @@ namespace Air.Mapper.Internal
                 }
                 else
                 {
-                    LoadAndSetCollection(destinationNode, destinationNodeMember);
+                    MapperToCollection(destinationNode, destinationNodeMember);
                 }
             }
         }
 
         #endregion
 
-        #region MapperMap
+        #region Mapper.To*Collection
 
-        private bool TryConvertToArray(DestinationNodeMember destinationNodeMember)
+        private bool ImplementsGenericTypeInterface(Type type, Type genericTypeInterface) =>
+            type.GetInterfaces().Where(i => i.IsGenericType).Select(i => i.GetGenericTypeDefinition()).Contains(genericTypeInterface);
+
+        private Type GetCollectionElementType(Type collectionType) =>
+            collectionType.IsArray ? collectionType.GetElementType() :
+                collectionType.GenericTypeArguments.Length == 1 ?
+                    collectionType.GenericTypeArguments[0] :
+                    typeof(KeyValuePair<,>).MakeGenericType(new[]
+                    {
+                        collectionType.GenericTypeArguments[0],
+                        collectionType.GenericTypeArguments[1]
+                    });
+
+        private string GetMapperToCollectionMethodName(Type collectionType) =>
+            collectionType.IsArray ? ToArray : $"{To}{collectionType.GetGenericTypeDefinition().Name.Split('`')[0]}";
+
+        private Type MakeArrayType(Type type) =>
+          type.IsArray ? type : type.GenericTypeArguments[0].MakeArrayType();
+
+        private Type MakeGenericIEnumerableType(Type collectionType) =>
+            typeof(IEnumerable<>).MakeGenericType(new[] { GetCollectionElementType(collectionType) });
+
+        private Type MakeGenericIDictionaryType(Type iDictionaryCollectionType) =>
+            typeof(IDictionary<,>).MakeGenericType(new[]
+            {
+                iDictionaryCollectionType.GenericTypeArguments[0],
+                iDictionaryCollectionType.GenericTypeArguments[1]
+            });
+
+        private Type GetCollectionConstructorParameterType(Type collectionType)
         {
-            MethodInfo methodInfo = destinationNodeMember.Info.Type
-                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(m =>
-                    m.Name == ToArray &&
-                    m.GetParameters().Length == 0 &&
-                    m.ReturnType == destinationNodeMember.Local.LocalType);
+            if (collectionType.GenericTypeArguments.Length == 1)
+                return MakeGenericIEnumerableType(collectionType);
 
-            if (methodInfo == null)
-                return false;
-
-            IL.Emit(OpCodes.Callvirt, methodInfo);
-
-            return true;
+            return MakeGenericIDictionaryType(collectionType);
         }
 
-        private void CallLinqEnumerableToArray(DestinationNodeMember destinationNodeMember)
+        private void ConvertToCollection(Type collectionType) =>
+            IL.Emit(OpCodes.Newobj, collectionType.GetConstructor(new[]
+            {
+                GetCollectionConstructorParameterType(collectionType)
+            }));
+
+        private MethodInfo GetMapperToKVPCollectionTypeMethod(Type sourceType, Type destinationType)
         {
-            MethodInfo methodInfo = typeof(Enumerable)
-                .GetMethods(BindingFlags.Static | BindingFlags.Public)
-                .FirstOrDefault(m =>
-                    m.Name == ToArray &&
-                    m.GetParameters().Length == 1 &&
-                    m.IsDefined(typeof(ExtensionAttribute), false));
-
-            methodInfo = methodInfo.MakeGenericMethod(destinationNodeMember.Local.LocalType.GetElementType());
-
-            IL.Emit(OpCodes.Call, methodInfo);
+            return null;
         }
 
-        private bool IsDictionary(Type type)
+        private MethodInfo GetMapperToCollectionTypeMethod(Type sourceType, Type destinationType)
         {
+            if (destinationType.GenericTypeArguments.Length == 2)
+                return GetMapperToKVPCollectionTypeMethod(sourceType, destinationType);
+
+            MethodInfo[] methods = typeof(Mapper<,>).MakeGenericType(new[]
+                {
+                    GetCollectionElementType(sourceType),
+                    GetCollectionElementType(destinationType)
+                })
+               .GetMethods(BindingFlags.Public | BindingFlags.Static);
+
             return
-                type.GenericTypeArguments.Length == 2 &&
-                type.GetInterfaces().Where(i => i.IsGenericType).Select(i => i.GetGenericTypeDefinition()).Contains(typeof(IDictionary<,>));
+                methods.FirstOrDefault(m =>
+                    m.Name == GetMapperToCollectionMethodName(destinationType) &&
+                    !m.IsGenericMethod &&
+                    m.ReturnType == destinationType &&
+                    m.GetParameters().Length == 1 &&
+                    m.GetParameters()[0].ParameterType == sourceType) ??
+                methods.FirstOrDefault(m =>
+                    m.Name == GetMapperToCollectionMethodName(destinationType) &&
+                    !m.IsGenericMethod &&
+                    m.ReturnType == destinationType &&
+                    m.GetParameters().Length == 1 &&
+                    m.GetParameters()[0].ParameterType == MakeGenericIEnumerableType(sourceType)) ??
+                methods.FirstOrDefault(m =>
+                    m.Name == nameof(Mapper<S, D>.ToArray) &&
+                    !m.IsGenericMethod &&
+                    m.ReturnType == MakeArrayType(destinationType) &&
+                    m.GetParameters().Length == 1 &&
+                    m.GetParameters()[0].ParameterType == sourceType) ??
+                methods.Single(m =>
+                    m.Name == nameof(Mapper<S, D>.ToArray) &&
+                    !m.IsGenericMethod &&
+                    m.ReturnType == MakeArrayType(destinationType) &&
+                    m.GetParameters().Length == 1 &&
+                    m.GetParameters()[0].ParameterType == MakeGenericIEnumerableType(sourceType));
         }
 
-        private void ConvertDestinationNodeMemberTypeToCollection(
+        private MethodInfo GetMapperToCollectionTypeMethod(DestinationNodeMember destinationNodeMember) =>
+            GetMapperToCollectionTypeMethod(destinationNodeMember.SourceNodeMember.Type, destinationNodeMember.Info.Type);
+
+        private void MapperToCollection(
             DestinationNode destinationNode,
             DestinationNodeMember destinationNodeMember)
         {
-            if (IsDictionary(destinationNodeMember.Info.Type))
+            if (Method.ReturnType == typeof(void))
                 return;
 
-            IL.Emit(OpCodes.Ldnull);
-            IL.EmitStloc(destinationNodeMember.Local.LocalIndex);
-
-            Load(destinationNode, destinationNodeMember);
-            IL.EmitBrfalse_s(() =>
-            {
-                Load(destinationNode, destinationNodeMember);
-                if (!TryConvertToArray(destinationNodeMember))
-                    CallLinqEnumerableToArray(destinationNodeMember);
-                IL.EmitStloc(destinationNodeMember.Local.LocalIndex);
-            });
-        }
-
-        private void ConvertCollectionToDestinationNodeMemberType(DestinationNodeMember destinationNodeMember) =>
-            IL.Emit(OpCodes.Newobj, destinationNodeMember.Info.Type.GetConstructor(new[]
-            {
-                CollectionDestinationType(destinationNodeMember.Info.Type)
-            }));
-
-        private Type CollectionDestinationType(Type type)
-        {
-            if (type.IsArray)
-                return type;
-
-            if (type.GenericTypeArguments.Length == 1)
-                return type.GenericTypeArguments[0].MakeArrayType();
-
-            return typeof(Dictionary<,>).MakeGenericType(new[]
-            {
-                type.GenericTypeArguments[0],
-                type.GenericTypeArguments[1]
-            });
-        }
-
-        private Type MapperMapToArrayGenericTypeArgument(Type type)
-        {
-            if (type.IsArray)
-                return type.GetElementType();
-
-            return type.GenericTypeArguments[0];
-        }
-
-        private MethodInfo MapperMapCollectionFuncMethodInfo(Type sourceType, Type destinationType)
-        {
-            if (destinationType.IsArray || destinationType.GenericTypeArguments.Length == 1)
-                return typeof(Mapper<,>).MakeGenericType(new[]
-                {
-                    MapperMapToArrayGenericTypeArgument(sourceType),
-                    MapperMapToArrayGenericTypeArgument(destinationType)
-                })
-                .GetMethods(BindingFlags.Public | BindingFlags.Static).Single(m =>
-                    m.Name == nameof(Mapper<S, D>.ToArray) &&
-                    !m.IsGenericMethod &&
-                    m.ReturnType == CollectionDestinationType(destinationType) &&
-                    m.GetParameters().Length == 1 &&
-                    m.GetParameters()[0].ParameterType == typeof(IEnumerable<>).MakeGenericType(new[]
-                    {
-                        MapperMapToArrayGenericTypeArgument(sourceType)
-                    }));
-
-            return typeof(Mapper<,>).MakeGenericType(new[]
-            {
-                sourceType.GenericTypeArguments[1],
-                destinationType.GenericTypeArguments[1]
-            })
-            .GetMethods(BindingFlags.Public | BindingFlags.Static).Single(m =>
-                m.Name == nameof(Mapper<S, D>.ToDictionary) &&
-                m.IsGenericMethod &&
-                m.ReturnType.IsGenericType &&
-                m.ReturnType.GetGenericTypeDefinition() == typeof(Dictionary<,>) &&
-                m.GetParameters().Length == 1 &&
-                m.GetParameters()[0].ParameterType.IsGenericType &&
-                m.GetParameters()[0].ParameterType.GenericTypeArguments.Length == 2 &&
-                m.GetParameters()[0].ParameterType.GetGenericTypeDefinition() == typeof(IDictionary<,>))
-            .MakeGenericMethod(new[]
-            {
-                sourceType.GenericTypeArguments[0],
-                destinationType.GenericTypeArguments[0]
-            });
-        }
-
-        private MethodInfo MapperMapCollectionActionRefMethodInfo(Type sourceType, Type destinationType)
-        {
-            if (destinationType.IsArray || destinationType.GenericTypeArguments.Length == 1)
-                return typeof(Mapper<,>).MakeGenericType(new[]
-                {
-                    MapperMapToArrayGenericTypeArgument(sourceType),
-                    MapperMapToArrayGenericTypeArgument(destinationType)
-                })
-                .GetMethods(BindingFlags.Public | BindingFlags.Static).Single(m =>
-                    m.Name == nameof(Mapper<S, D>.ToArray) &&
-                    !m.IsGenericMethod &&
-                    m.ReturnType == typeof(void) &&
-                    m.GetParameters().Length == 2 &&
-                    m.GetParameters()[0].ParameterType == typeof(IEnumerable<>).MakeGenericType(new[]
-                    {
-                        MapperMapToArrayGenericTypeArgument(sourceType)
-                    }) &&
-                    m.GetParameters()[1].ParameterType == CollectionDestinationType(destinationType).MakeByRefType());
-
-            return typeof(Mapper<,>).MakeGenericType(new[]
-            {
-                sourceType.GenericTypeArguments[1],
-                destinationType.GenericTypeArguments[1]
-            })
-            .GetMethods(BindingFlags.Public | BindingFlags.Static).Single(m =>
-                m.Name == nameof(Mapper<S, D>.ToDictionary) &&
-                m.IsGenericMethod &&
-                m.ReturnType == typeof(void) &&
-                m.GetParameters().Length == 2 &&
-                m.GetParameters()[0].ParameterType.IsGenericType &&
-                m.GetParameters()[0].ParameterType.GenericTypeArguments.Length == 2 &&
-                m.GetParameters()[0].ParameterType.GetGenericTypeDefinition() == typeof(IDictionary<,>) &&
-                m.GetParameters()[1].ParameterType.IsGenericType &&
-                m.GetParameters()[1].ParameterType.GenericTypeArguments.Length == 2 &&
-                m.GetParameters()[1].ParameterType.GetGenericTypeDefinition() == typeof(IDictionary<,>))
-            .MakeGenericMethod(new[]
-            {
-                sourceType.GenericTypeArguments[0],
-                destinationType.GenericTypeArguments[0]
-            });
-        }
-
-        private void MapperMapCollectionFunc(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember)
-        {
-            MethodInfo methodInfo = MapperMapCollectionFuncMethodInfo(
-                destinationNodeMember.SourceNodeMember.Type,
-                destinationNodeMember.Info.Type);
+            MethodInfo mapperToCollection = GetMapperToCollectionTypeMethod(destinationNodeMember);
 
             if (!destinationNodeMember.Info.IsStatic)
                 Load(destinationNode);
 
             Load(destinationNodeMember.SourceNode, destinationNodeMember.SourceNodeMember);
-            IL.Emit(OpCodes.Call, methodInfo);
+            IL.Emit(OpCodes.Call, mapperToCollection);
 
-            if (destinationNodeMember.Info.Type != CollectionDestinationType(destinationNodeMember.Info.Type))
-                ConvertCollectionToDestinationNodeMemberType(destinationNodeMember);
+            if (mapperToCollection.ReturnType != destinationNodeMember.Info.Type)
+                ConvertToCollection(destinationNodeMember.Info.Type);
 
             IL.EmitSetMemberValue(destinationNodeMember.Info);
         }
 
-        private void MapperMapCollectionActionRef(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember)
+        private void MapperToCollection(DestinationNodeMember destinationNodeMember)
         {
-            MethodInfo methodInfo = MapperMapCollectionActionRefMethodInfo(
-               destinationNodeMember.SourceNodeMember.Type,
-               destinationNodeMember.Info.Type);
+            if (Method.ReturnType == typeof(void))
+                return;
 
-            if (destinationNodeMember.Info.Type != destinationNodeMember.Local.LocalType)
-            {
-                ConvertDestinationNodeMemberTypeToCollection(destinationNode, destinationNodeMember);
-            }
-            else
-            {
-                Load(destinationNode, destinationNodeMember);
-                IL.EmitStloc(destinationNodeMember.Local.LocalIndex);
-            }
-
+            IL.Emit(OpCodes.Dup);
             Load(destinationNodeMember.SourceNode, destinationNodeMember.SourceNodeMember);
-            LoadLocal(destinationNodeMember.Local, true);
-            IL.Emit(OpCodes.Call, methodInfo);
+            MethodInfo mapperToCollection = GetMapperToCollectionTypeMethod(destinationNodeMember);
+            IL.Emit(OpCodes.Call, mapperToCollection);
 
-            if (!destinationNodeMember.Info.IsStatic)
-                Load(destinationNode);
-            LoadLocal(destinationNodeMember.Local, false);
-            if (destinationNodeMember.Info.Type != CollectionDestinationType(destinationNodeMember.Info.Type))
-                ConvertCollectionToDestinationNodeMemberType(destinationNodeMember);
+            if (mapperToCollection.ReturnType != destinationNodeMember.Info.Type)
+                ConvertToCollection(destinationNodeMember.Info.Type);
 
             IL.EmitSetMemberValue(destinationNodeMember.Info);
         }
 
-        private void MapperMapCollection(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember)
-        {
-            if (Method.ReturnType != typeof(void))
-                MapperMapCollectionFunc(destinationNode, destinationNodeMember);
-            else
-                MapperMapCollectionActionRef(destinationNode, destinationNodeMember);
-        }
+        #endregion
+
+        #region Mapper.Map
 
         private void MapperMapFunc(DestinationNode destinationNode)
         {
@@ -960,28 +837,21 @@ namespace Air.Mapper.Internal
         }
 
         private void MapSourceNodeMembers(
-           SourceNode sourceNode,
-           Action<DestinationNode, List<DestinationNodeMember>> mapDestinationNodeMembers)
-        {
-            foreach (DestinationNode destinationNode in Schema.DestinationNodes)
-            {
-                if (!destinationNode.Load)
-                    continue;
+            SourceNode sourceNode,
+            Action<DestinationNode, List<DestinationNodeMember>> mapDestinationNodeMembers) =>
+                Schema.ForEachDestinationNode(
+                    n => n.Load,
+                    n =>
+                    {
+                        List<DestinationNodeMember> members = Schema.GetDestinationNodeMembers(n, m =>
+                            m.SourceNode != null &&
+                            m.SourceNode.Name == sourceNode.Name &&
+                            m.Map &&
+                            m.Status == Status.Successful);
 
-                List<DestinationNodeMember> destinationNodeMembers =
-                    destinationNode.Members.Where(w =>
-                        w.SourceNode != null &&
-                        w.SourceNode.Name == sourceNode.Name &&
-                        w.Map &&
-                        w.Status == Status.Successful)
-                    .ToList();
-
-                if (destinationNodeMembers.Count == 0)
-                    continue;
-
-                mapDestinationNodeMembers(destinationNode, destinationNodeMembers);
-            }
-        }
+                        if (members.Count != 0)
+                            mapDestinationNodeMembers(n, members);
+                    });
 
         private void MapSourceChildNodes(SourceNode sourceNode, ref List<DestinationNode> destinationNodes)
         {
@@ -1112,7 +982,7 @@ namespace Air.Mapper.Internal
         }
 
         /// <summary>
-        /// Avoid using valueType destinationNode
+        /// Avoid using this method for valueType destinationNode
         /// </summary>
         /// <param name="destinationNode"></param>
         /// <param name="destinationNodeMembers"></param>
@@ -1139,9 +1009,14 @@ namespace Air.Mapper.Internal
 
             foreach (DestinationNodeMember destinationNodeMember in destinationNodeMembers)
             {
-                if (destinationNodeMember.Info.IsStatic || destinationNodeMember.IsCollection)
+                if (destinationNodeMember.Info.IsStatic)
                 {
                     queueLoadAndSet.Add(destinationNodeMember);
+                    continue;
+                }
+                else if (destinationNodeMember.IsCollection)
+                {
+                    MapperToCollection(destinationNodeMember);
                     continue;
                 }
 

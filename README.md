@@ -1,4 +1,4 @@
-# What is Dream.Mapper?
+# What is Air.Mapper?
 
 Is a simple and fast open source mapping library which allows to map one type members into another.
 

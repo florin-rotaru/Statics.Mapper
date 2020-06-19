@@ -28,174 +28,151 @@ namespace Playground
             customization.Customize(Fixture);
         }
 
-        TRecursiveNode GetRecursiveNode(int recursion)
-        {
-            return new TRecursiveNode
-            {
-                Name = Fixture.Create<string>(),
-                ChildNodes = recursion > 0 ? new List<TRecursiveNode>
-                    {
-                        GetRecursiveNode(recursion - 1),
-                        GetRecursiveNode(recursion - 1),
-                        GetRecursiveNode(recursion - 1)
-                    } : new List<TRecursiveNode>(),
-                ParentNode = recursion > 0 ? new TRecursiveNode
-                {
-                    ChildNodes = recursion > 0 ? new List<TRecursiveNode>
-                        {
-                            GetRecursiveNode(recursion - 1),
-                            GetRecursiveNode(recursion - 1),
-                            GetRecursiveNode(recursion - 1)
-                        } : new List<TRecursiveNode>(),
-                    ParentNode = recursion > 0 ? GetRecursiveNode(recursion - 1) : new TRecursiveNode()
-                } : new TRecursiveNode()
-            };
-        }
 
-        [Fact]
-        public void EvaluatePath()
-        {
-            var source = new TNodes();
-            var map = Mapper<TNodes, TNodes>.CompileFunc(o => o
-                .Ignore(i => i)
-                .Map(s => s.Node_1.Segment.Members.GuidMember, d => d.Node_1.Segment.Members.GuidMember)
-                .Map(s => s.Node_1.Segment.Members.Int16SMember, d => d.Node_1.Segment.Members.Int16SMember)
-                .Map(s => s.Node_1.Segment.Members.Int32Member, d => d.Node_1.Segment.Members.Int32Member)
+        //[Fact]
+        //public void EvaluatePath()
+        //{
+        //    var source = new TNodes();
+        //    var map = Mapper<TNodes, TNodes>.CompileFunc(o => o
+        //        .Ignore(i => i)
+        //        .Map(s => s.Node_1.Segment.Members.GuidMember, d => d.Node_1.Segment.Members.GuidMember)
+        //        .Map(s => s.Node_1.Segment.Members.Int16SMember, d => d.Node_1.Segment.Members.Int16SMember)
+        //        .Map(s => s.Node_1.Segment.Members.Int32Member, d => d.Node_1.Segment.Members.Int32Member)
 
-                .Map(s => s.Node_2.Segment.Members.Int64Member, d => d.Node_1.Segment.Members.Int64Member)
-                .Map(s => s.Node_2.Segment.Members.UInt16Member, d => d.Node_1.Segment.Members.UInt16Member)
-                .Map(s => s.Node_2.Segment.Members.UInt32Member, d => d.Node_1.Segment.Members.UInt32Member)
+        //        .Map(s => s.Node_2.Segment.Members.Int64Member, d => d.Node_1.Segment.Members.Int64Member)
+        //        .Map(s => s.Node_2.Segment.Members.UInt16Member, d => d.Node_1.Segment.Members.UInt16Member)
+        //        .Map(s => s.Node_2.Segment.Members.UInt32Member, d => d.Node_1.Segment.Members.UInt32Member)
 
-                .Map(s => s.Node_3.Segment.Members.UInt64Member, d => d.Node_1.Segment.Members.UInt64Member)
-                .Map(s => s.Node_3.Segment.Members.DateTimeMember, d => d.Node_1.Segment.Members.DateTimeMember)
-                .Map(s => s.Node_3.Segment.Members.DecimalMember, d => d.Node_1.Segment.Members.DecimalMember));
+        //        .Map(s => s.Node_3.Segment.Members.UInt64Member, d => d.Node_1.Segment.Members.UInt64Member)
+        //        .Map(s => s.Node_3.Segment.Members.DateTimeMember, d => d.Node_1.Segment.Members.DateTimeMember)
+        //        .Map(s => s.Node_3.Segment.Members.DecimalMember, d => d.Node_1.Segment.Members.DecimalMember));
 
-            source.Node_1 = new TNode
-            {
-                Segment = new TSegment
-                {
-                    Members = new TC0_I0_Members
-                    {
-                        GuidMember = Fixture.Create<Guid>(),
-                        Int16SMember = Fixture.Create<short>(),
-                        Int32Member = Fixture.Create<int>()
-                    }
-                }
-            };
+        //    source.Node_1 = new TNode
+        //    {
+        //        Segment = new TSegment
+        //        {
+        //            Members = new TC0_I0_Members
+        //            {
+        //                GuidMember = Fixture.Create<Guid>(),
+        //                Int16SMember = Fixture.Create<short>(),
+        //                Int32Member = Fixture.Create<int>()
+        //            }
+        //        }
+        //    };
 
-            source.Node_2 = new TNode
-            {
-                Segment = new TSegment
-                {
-                    Members = new TC0_I0_Members
-                    {
-                        Int64Member = Fixture.Create<long>(),
-                        UInt16Member = Fixture.Create<ushort>(),
-                        UInt32Member = Fixture.Create<uint>()
-                    }
-                }
-            };
+        //    source.Node_2 = new TNode
+        //    {
+        //        Segment = new TSegment
+        //        {
+        //            Members = new TC0_I0_Members
+        //            {
+        //                Int64Member = Fixture.Create<long>(),
+        //                UInt16Member = Fixture.Create<ushort>(),
+        //                UInt32Member = Fixture.Create<uint>()
+        //            }
+        //        }
+        //    };
 
-            source.Node_3 = new TNode
-            {
-                Segment = new TSegment
-                {
-                    Members = new TC0_I0_Members
-                    {
-                        UInt64Member = Fixture.Create<ulong>(),
-                        DateTimeMember = Fixture.Create<DateTime>(),
-                        DecimalMember = Fixture.Create<decimal>()
-                    }
-                }
-            };
+        //    source.Node_3 = new TNode
+        //    {
+        //        Segment = new TSegment
+        //        {
+        //            Members = new TC0_I0_Members
+        //            {
+        //                UInt64Member = Fixture.Create<ulong>(),
+        //                DateTimeMember = Fixture.Create<DateTime>(),
+        //                DecimalMember = Fixture.Create<decimal>()
+        //            }
+        //        }
+        //    };
 
-            var destination = map(source);
+        //    var destination = map(source);
 
-            Assert.Equal(source.Node_1.Segment.Members.GuidMember, destination.Node_1.Segment.Members.GuidMember);
-            Assert.Equal(source.Node_1.Segment.Members.Int16SMember, destination.Node_1.Segment.Members.Int16SMember);
-            Assert.Equal(source.Node_1.Segment.Members.Int32Member, destination.Node_1.Segment.Members.Int32Member);
+        //    Assert.Equal(source.Node_1.Segment.Members.GuidMember, destination.Node_1.Segment.Members.GuidMember);
+        //    Assert.Equal(source.Node_1.Segment.Members.Int16SMember, destination.Node_1.Segment.Members.Int16SMember);
+        //    Assert.Equal(source.Node_1.Segment.Members.Int32Member, destination.Node_1.Segment.Members.Int32Member);
 
-            Assert.Equal(source.Node_2.Segment.Members.Int64Member, destination.Node_1.Segment.Members.Int64Member);
-            Assert.Equal(source.Node_2.Segment.Members.UInt16Member, destination.Node_1.Segment.Members.UInt16Member);
-            Assert.Equal(source.Node_2.Segment.Members.UInt32Member, destination.Node_1.Segment.Members.UInt32Member);
+        //    Assert.Equal(source.Node_2.Segment.Members.Int64Member, destination.Node_1.Segment.Members.Int64Member);
+        //    Assert.Equal(source.Node_2.Segment.Members.UInt16Member, destination.Node_1.Segment.Members.UInt16Member);
+        //    Assert.Equal(source.Node_2.Segment.Members.UInt32Member, destination.Node_1.Segment.Members.UInt32Member);
 
-            Assert.Equal(source.Node_3.Segment.Members.UInt64Member, destination.Node_1.Segment.Members.UInt64Member);
-            Assert.Equal(source.Node_3.Segment.Members.DateTimeMember, destination.Node_1.Segment.Members.DateTimeMember);
-            Assert.Equal(source.Node_3.Segment.Members.DecimalMember, destination.Node_1.Segment.Members.DecimalMember);
+        //    Assert.Equal(source.Node_3.Segment.Members.UInt64Member, destination.Node_1.Segment.Members.UInt64Member);
+        //    Assert.Equal(source.Node_3.Segment.Members.DateTimeMember, destination.Node_1.Segment.Members.DateTimeMember);
+        //    Assert.Equal(source.Node_3.Segment.Members.DecimalMember, destination.Node_1.Segment.Members.DecimalMember);
 
-            source.Node_3 = null;
+        //    source.Node_3 = null;
 
-            destination = map(source);
+        //    destination = map(source);
 
-            Assert.Equal(source.Node_1.Segment.Members.GuidMember, destination.Node_1.Segment.Members.GuidMember);
-            Assert.Equal(source.Node_1.Segment.Members.Int16SMember, destination.Node_1.Segment.Members.Int16SMember);
-            Assert.Equal(source.Node_1.Segment.Members.Int32Member, destination.Node_1.Segment.Members.Int32Member);
+        //    Assert.Equal(source.Node_1.Segment.Members.GuidMember, destination.Node_1.Segment.Members.GuidMember);
+        //    Assert.Equal(source.Node_1.Segment.Members.Int16SMember, destination.Node_1.Segment.Members.Int16SMember);
+        //    Assert.Equal(source.Node_1.Segment.Members.Int32Member, destination.Node_1.Segment.Members.Int32Member);
 
-            Assert.Equal(source.Node_2.Segment.Members.Int64Member, destination.Node_1.Segment.Members.Int64Member);
-            Assert.Equal(source.Node_2.Segment.Members.UInt16Member, destination.Node_1.Segment.Members.UInt16Member);
-            Assert.Equal(source.Node_2.Segment.Members.UInt32Member, destination.Node_1.Segment.Members.UInt32Member);
+        //    Assert.Equal(source.Node_2.Segment.Members.Int64Member, destination.Node_1.Segment.Members.Int64Member);
+        //    Assert.Equal(source.Node_2.Segment.Members.UInt16Member, destination.Node_1.Segment.Members.UInt16Member);
+        //    Assert.Equal(source.Node_2.Segment.Members.UInt32Member, destination.Node_1.Segment.Members.UInt32Member);
 
-            Assert.Equal(default(ulong), destination.Node_1.Segment.Members.UInt64Member);
-            Assert.Equal(default(DateTime), destination.Node_1.Segment.Members.DateTimeMember);
-            Assert.Equal(default(decimal), destination.Node_1.Segment.Members.DecimalMember);
+        //    Assert.Equal(default(ulong), destination.Node_1.Segment.Members.UInt64Member);
+        //    Assert.Equal(default(DateTime), destination.Node_1.Segment.Members.DateTimeMember);
+        //    Assert.Equal(default(decimal), destination.Node_1.Segment.Members.DecimalMember);
 
-        }
+        //}
 
-        [Fact]
-        public void FromPropertyToClass()
-        {
-            var source = Fixture.Create<TNode>();
-            var map = Mapper<TNode, TC0_I0_Members>.CompileFunc(o => o
-              .Ignore(i => i)
-              .Map(s => s.Segment.Members, d => d));
-            var destination = map(source);
+        //[Fact]
+        //public void FromPropertyToClass()
+        //{
+        //    var source = Fixture.Create<TNode>();
+        //    var map = Mapper<TNode, TC0_I0_Members>.CompileFunc(o => o
+        //      .Ignore(i => i)
+        //      .Map(s => s.Segment.Members, d => d));
+        //    var destination = map(source);
 
-            Assert.True(CompareEquals(destination, source.Segment.Members));
-        }
+        //    Assert.True(CompareEquals(destination, source.Segment.Members));
+        //}
 
-        [Fact]
-        public void FromClassToProperty()
-        {
-            var source = Fixture.Create<TC0_I0_Members>();
-            var map = Mapper<TC0_I0_Members, TNode>.CompileFunc(o => o
-                 .Ignore(i => i)
-                 .Map(s => s, d => d.Segment.Members));
-            var destination = map(source);
+        //[Fact]
+        //public void FromClassToProperty()
+        //{
+        //    var source = Fixture.Create<TC0_I0_Members>();
+        //    var map = Mapper<TC0_I0_Members, TNode>.CompileFunc(o => o
+        //         .Ignore(i => i)
+        //         .Map(s => s, d => d.Segment.Members));
+        //    var destination = map(source);
 
-            Assert.True(CompareEquals(source, destination.Segment.Members));
-        }
+        //    Assert.True(CompareEquals(source, destination.Segment.Members));
+        //}
 
 
 
-        [Fact]
-        public void IgnoreAll()
-        {
-            var source = Fixture.Create<TNode>();
-            var map = Mapper<TNode, TNode>.CompileFunc(o => o
-                .Ignore(i => i));
-            var destination = map(source);
+        //[Fact]
+        //public void IgnoreAll()
+        //{
+        //    var source = Fixture.Create<TNode>();
+        //    var map = Mapper<TNode, TNode>.CompileFunc(o => o
+        //        .Ignore(i => i));
+        //    var destination = map(source);
 
-            Assert.True(CompareNoneEquals(source, destination, evaluateChildNodes: true));
-        }
+        //    Assert.True(CompareNoneEquals(source, destination, evaluateChildNodes: true));
+        //}
 
-        [Fact]
-        public void IgnoreNode()
-        {
-            var source = Fixture.Create<TNode>();
-            var map = Mapper<TNode, TNode>.CompileFunc(o => o
-                .Ignore(i => i.Segment.NullableMembers));
-            var destination = map(source);
+        //[Fact]
+        //public void IgnoreNode()
+        //{
+        //    var source = Fixture.Create<TNode>();
+        //    var map = Mapper<TNode, TNode>.CompileFunc(o => o
+        //        .Ignore(i => i.Segment.NullableMembers));
+        //    var destination = map(source);
 
-            Assert.True(CompareEquals(source.Segment.Members, destination.Segment.Members));
-            Assert.Null(destination.Segment.NullableMembers);
+        //    Assert.True(CompareEquals(source.Segment.Members, destination.Segment.Members));
+        //    Assert.Null(destination.Segment.NullableMembers);
 
-            map = Mapper<TNode, TNode>.CompileFunc(o => o
-               .Ignore(i => i.Segment));
-            destination = map(source);
+        //    map = Mapper<TNode, TNode>.CompileFunc(o => o
+        //       .Ignore(i => i.Segment));
+        //    destination = map(source);
 
-            Assert.Equal(source.Name, destination.Name);
-            Assert.Null(destination.Segment);
-        }
+        //    Assert.Equal(source.Name, destination.Name);
+        //    Assert.Null(destination.Segment);
+        //}
 
 
 

@@ -341,9 +341,7 @@ namespace Builder
         void Buildcsproj(string directory, string group)
         {
             string csproj = Path.Combine(directory, $"{group}.csproj");
-            if (File.Exists(csproj))
-                return;
-
+            
             File.WriteAllText(
                 csproj,
                 File.ReadAllText(BuilderFile("group.csproj.file"))
@@ -447,7 +445,7 @@ namespace Builder
 
         #endregion
 
-        // [Fact]
+        [Fact]
         public void Build()
         {
             var nodeTypes = BuildFromToN();

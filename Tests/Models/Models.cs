@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Models
@@ -53,14 +55,63 @@ namespace Models
     #endregion
 
     #region Recursive
-    public class TRecursiveNode
+    public class TNode
     {
         public string Name { get; set; }
 
-        public TRecursiveNode ParentNode { get; set; }
-        public List<TRecursiveNode> ChildNodes { get; set; }
+        public TNode ParentNode { get; set; }
+        public List<TNode> ChildNodes { get; set; }
     }
     #endregion
+
+
+    public class TC0_Empty { }
+    public struct TS0_Empty { }
+
+    public class TEnumerable<T> : IEnumerable<T>
+    {
+        private List<T> Collection { get; set; }
+
+        public TEnumerable() { }
+        public TEnumerable(IEnumerable<T> collection)
+        {
+            Collection = new List<T>(collection);
+        }
+
+        public IEnumerator<T> GetEnumerator() =>
+            Collection.GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() =>
+            Collection.GetEnumerator();
+    }
+
+    public class TC1_I0_Array_Members { public TC0_I0_Members[] N0 { get; set; } }
+    public class TC1_I1_HashSet_Members { public HashSet<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I2_LinkedList_Members { public LinkedList<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I3_List_Members { public List<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I4_Queue_Members { public Queue<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I5_SortedSet_Members { public SortedSet<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I6_Stack_Members { public Stack<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I7_ConcurrentBag_Members { public ConcurrentBag<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I8_ConcurrentQueue_Members { public ConcurrentQueue<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I9_ConcurrentStack_Members { public ConcurrentStack<TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I10_TEnumerable_Members { public TEnumerable<TC0_I0_Members> N0 { get; set; } }
+
+    public struct TS1_I0_Array_Members { public TC0_I0_Members[] N0 { get; set; } }
+    public struct TS1_I1_HashSet_Members { public HashSet<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I2_LinkedList_Members { public LinkedList<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I3_List_Members { public List<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I4_Queue_Members { public Queue<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I5_SortedSet_Members { public SortedSet<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I6_Stack_Members { public Stack<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I7_ConcurrentBag_Members { public ConcurrentBag<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I8_ConcurrentQueue_Members { public ConcurrentQueue<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I9_ConcurrentStack_Members { public ConcurrentStack<TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I10_TEnumerable_Members { public TEnumerable<TC0_I0_Members> N0 { get; set; } }
+
+
+
+
 
 
 
@@ -162,156 +213,6 @@ namespace Models
 
 
 
-    #region Nodes
-    public class TMembersNode
-    {
-        public TC0_I0_Members Members { get; set; }
-    }
-
-    public class TStaticMembersNode
-    {
-        public static TC0_I4_Static_Members Members { get; set; }
-    }
-
-    public struct TStructMembersNode
-    {
-        public TS0_I0_Members Members { get; set; }
-    }
-
-    public struct TStaticStructMembersNode
-    {
-        public static TS0_I3_Static_Members Members { get; set; }
-    }
-
-    public struct TNullableStructMembersNode
-    {
-        public TS0_I0_Members? Members { get; set; }
-    }
-
-    public struct TStaticNullableStructMembersNode
-    {
-        public static TS0_I3_Static_Members? Members { get; set; }
-    }
-
-    public class TMembersNodes
-    {
-        public TMembersNode MembersNode { get; set; }
-        public TStructMembersNode StructMembersNode { get; set; }
-        public TNullableStructMembersNode? NullableStructMembersNode { get; set; }
-    }
-
-    public class TStaticMembersNodes
-    {
-        public static TStaticMembersNode MembersNode { get; set; }
-        public static TStaticStructMembersNode StructMembersNode { get; set; }
-        public static TStaticNullableStructMembersNode? NullableStructMembersNode { get; set; }
-    }
-
-    public class TSegment
-    {
-        public TC0_I0_Members Members { get; set; }
-        public TC0_I1_Nullable_Members NullableMembers { get; set; }
-    }
-
-    public class TStaticSegment
-    {
-        public TC0_I4_Static_Members Members { get; set; }
-        public TC0_I5_StaticNullable_Members NullableMembers { get; set; }
-    }
-
-    public class TLiteralSegment
-    {
-        public TC0_I2_Literal_Members Members { get; set; }
-    }
-
-    public class TNode
-    {
-        public string Name { get; set; }
-        public TSegment Segment { get; set; }
-    }
-
-    public class TStaticNode
-    {
-        public static string Name { get; set; }
-        public TStaticSegment Segment { get; set; }
-    }
-
-    public class TLiteralNode
-    {
-        public const string Name = nameof(Name);
-        public TLiteralSegment Segment { get; set; }
-    }
-
-    public class TNodes
-    {
-        public TNode Node_1 { get; set; }
-        public TNode Node_2 { get; set; }
-        public TNode Node_3 { get; set; }
-    }
-    #endregion
-
-    #region StructNodes
-    public struct TStructSegment
-    {
-        public TS0_I0_Members Members { get; set; }
-        public TS0_I1_Nullable_Members NullableMembers { get; set; }
-    }
-
-    public struct TStaticStructSegment
-    {
-        public TS0_I3_Static_Members Members { get; set; }
-        public TS0_I4_StaticNullable_Members NullableMembers { get; set; }
-    }
-
-    public struct TLiteralStructSegment
-    {
-        public TS0_I2_Literal_Members Members { get; set; }
-    }
-
-    public struct TNullableStructSegment
-    {
-        public TS0_I0_Members? Members { get; set; }
-        public TS0_I1_Nullable_Members? NullableMembers { get; set; }
-    }
-
-    public struct TNullableStaticStructSegment
-    {
-        public TS0_I3_Static_Members? Members { get; set; }
-        public TS0_I4_StaticNullable_Members? NullableMembers { get; set; }
-    }
-
-    public struct TStructNode
-    {
-        public string Name { get; set; }
-        public TStructSegment Segment { get; set; }
-    }
-
-    public struct TStaticStructNode
-    {
-        public static string Name { get; set; }
-        public TStaticStructSegment Segment { get; set; }
-    }
-
-    public struct TStaticNullableStructNode
-    {
-        public static string Name { get; set; }
-        public TNullableStaticStructSegment? Segment { get; set; }
-    }
-
-    public struct TLiteralStructNode
-    {
-        public const string Name = nameof(Name);
-        public TLiteralStructSegment Segment { get; set; }
-    }
-
-    public struct TNullableStructNode
-    {
-        public string Name { get; set; }
-        public TNullableStructSegment? Segment { get; set; }
-    }
-    #endregion
-
-
 
     #region to be removed
 
@@ -324,7 +225,7 @@ namespace Models
         public List<TC0_I0_Members> MembersList { get; set; }
         public Dictionary<Type, TC0_I0_Members> MembersTypeDictionary { get; set; }
         public Dictionary<int, TC0_I0_Members> MembersIntDictionary { get; set; }
-        public Dictionary<int, TRecursiveNode> RecursiveNodesDictionary { get; set; }
+        public Dictionary<int, TNode> RecursiveNodesDictionary { get; set; }
     }
 
     public struct TStructWrapper
@@ -334,7 +235,7 @@ namespace Models
         public TC0_I0_Members[] MembersArray { get; set; }
         public List<TC0_I0_Members> MembersList { get; set; }
         public Dictionary<Type, TC0_I0_Members> MembersTypeDictionary { get; set; }
-        public Dictionary<int, TRecursiveNode> RecursiveNodesDictionary { get; set; }
+        public Dictionary<int, TNode> RecursiveNodesDictionary { get; set; }
         public Dictionary<int, TC0_I0_Members> MembersIntDictionary { get; set; }
     }
 

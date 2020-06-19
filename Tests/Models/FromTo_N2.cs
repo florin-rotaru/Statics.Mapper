@@ -1,4 +1,4 @@
-﻿using Air.Mapper;
+using Air.Mapper;
 using AutoFixture;
 using Models;
 using Newtonsoft.Json;

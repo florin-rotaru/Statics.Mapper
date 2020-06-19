@@ -278,6 +278,19 @@ namespace Air.Mapper.Internal
             OnChange();
         }
 
+        public void ForEachSourceNode(Func<SourceNode, bool> predicate, Action<SourceNode> action)
+        {
+            for (int i = 0; i < SourceNodes.Count; i++)
+                if (predicate(SourceNodes[i]))
+                    action(SourceNodes[i]);
+        }
+
+        public void ForEachDestinationNode(Func<DestinationNode, bool> predicate, Action<DestinationNode> action)
+        {
+            for (int i = 0; i < DestinationNodes.Count; i++)
+                if (predicate(DestinationNodes[i]))
+                    action(DestinationNodes[i]);
+        }
 
         private Dictionary<string, List<SourceNode>> SourceChildNodes = null;
         private void SetSourceChildNodes()
@@ -352,26 +365,20 @@ namespace Air.Mapper.Internal
             return false;
         }
 
-        private static bool CanReadCollection(MemberInfo sourceNodeMember)
-        {
-            return sourceNodeMember.HasGetMethod && IsCollection(sourceNodeMember.Type);
-        }
+        private static bool CanReadCollection(MemberInfo sourceNodeMember) =>
+            sourceNodeMember.HasGetMethod && IsCollection(sourceNodeMember.Type);
 
-        private static bool CanMaintainCollection(MemberInfo destinationNodeMember)
-        {
-            return destinationNodeMember.HasSetMethod && IsCollection(destinationNodeMember.Type);
-        }
+        private static bool CanMaintainCollection(MemberInfo destinationNodeMember) =>
+            destinationNodeMember.HasSetMethod && IsCollection(destinationNodeMember.Type);
 
         public static bool CanLoadAndSetCollectionValue(
             MemberInfo sourceNodeMember,
-            MemberInfo destinationNodeMember)
-        {
-            return CanReadCollection(sourceNodeMember) &&
+            MemberInfo destinationNodeMember) =>
+                CanReadCollection(sourceNodeMember) &&
                 CanMaintainCollection(destinationNodeMember) &&
                 !destinationNodeMember.Type.IsInterface &&
                 (sourceNodeMember.Type.IsArray || sourceNodeMember.Type.GenericTypeArguments.Length == 1) ==
                 (destinationNodeMember.Type.IsArray || destinationNodeMember.Type.GenericTypeArguments.Length == 1);
-        }
 
         private bool TryMapMember(
             SourceNode sourceNode,
@@ -408,10 +415,8 @@ namespace Air.Mapper.Internal
             return false;
         }
 
-        public static string NodeMemberName(string nodeName, string memberName)
-        {
-            return string.IsNullOrEmpty(nodeName) ? memberName : nodeName + DOT + memberName;
-        }
+        public static string NodeMemberName(string nodeName, string memberName) =>
+            string.IsNullOrEmpty(nodeName) ? memberName : nodeName + DOT + memberName;
 
         private void OnChange()
         {
@@ -543,42 +548,30 @@ namespace Air.Mapper.Internal
             return string.Join(DOT, segments);
         }
 
-        private bool IsSourceNode(string memberName)
-        {
-            return memberName == string.Empty || SourceNodes.Exists(w => w.Name == memberName);
-        }
+        private bool IsSourceNode(string memberName) =>
+            memberName == string.Empty || SourceNodes.Exists(w => w.Name == memberName);
 
-        private bool IsDestinationNode(string memberName)
-        {
-            return memberName == string.Empty || DestinationNodes.Exists(w => w.Name == memberName);
-        }
+        private bool IsDestinationNode(string memberName) =>
+            memberName == string.Empty || DestinationNodes.Exists(w => w.Name == memberName);
 
-        public static MemberInfo GetMember(string nodeName, List<TypeNode> nodes)
-        {
-            return nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
+        public List<DestinationNodeMember> GetDestinationNodeMembers(DestinationNode destinationNode, Func<DestinationNodeMember, bool> predicate) =>
+            destinationNode.Members.Where(predicate).ToList();
+
+        public static MemberInfo GetMember(string nodeName, List<TypeNode> nodes) =>
+            nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
                 .Members.First(w => w.Name == TypeInfo.GetName(nodeName));
-        }
 
-        public static MemberInfo GetMember(string nodeName, List<SourceNode> nodes)
-        {
-            return nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
+        public static MemberInfo GetMember(string nodeName, List<SourceNode> nodes) =>
+            nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
                 .Members.First(w => w.Name == TypeInfo.GetName(nodeName));
-        }
 
-        public static MemberInfo GetMember(string nodeName, List<DestinationNode> nodes)
-        {
-            return nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
+        public static MemberInfo GetMember(string nodeName, List<DestinationNode> nodes) =>
+            nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
                 .Members.First(w => w.Info.Name == TypeInfo.GetName(nodeName)).Info;
-        }
 
-        public SourceNode GetParentNode(SourceNode node)
-        {
-            if (node.Name == string.Empty)
-                return null;
-
-            return SourceNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(node.Name));
-        }
-
+        public SourceNode GetParentNode(SourceNode node) =>
+            node.Name != string.Empty ? SourceNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(node.Name)) : null;
+        
         public List<SourceNode> GetParentNodes(SourceNode node)
         {
             List<SourceNode> returnValue = new List<SourceNode>();
@@ -597,13 +590,8 @@ namespace Air.Mapper.Internal
             return returnValue;
         }
 
-        public DestinationNode GetParentNode(DestinationNode node)
-        {
-            if (node.Name == string.Empty)
-                return null;
-
-            return DestinationNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(node.Name));
-        }
+        public DestinationNode GetParentNode(DestinationNode node) =>
+            node.Name != string.Empty ? DestinationNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(node.Name)) : null;
 
         public List<DestinationNode> GetParentNodes(DestinationNode node)
         {
@@ -641,21 +629,16 @@ namespace Air.Mapper.Internal
             return returnValue.Where(predicate).ToList();
         }
 
-        public List<DestinationNode> GetChildNodes(DestinationNode node, Func<DestinationNode, bool> predicate)
-        {
-            return DestinationNodes
-                .Where(destinationNode =>
-                    destinationNode.ParentNode?.Name == node.Name &&
-                    predicate(destinationNode))
-                .ToList();
-        }
+        public List<DestinationNode> GetChildNodes(DestinationNode node, Func<DestinationNode, bool> predicate) =>
+            DestinationNodes.Where(destinationNode =>
+                destinationNode.ParentNode?.Name == node.Name &&
+                predicate(destinationNode))
+            .ToList();
 
-        public List<DestinationNode> GetChildNodes(DestinationNode node)
-        {
-            return DestinationNodes
-                .Where(destinationNode => destinationNode.ParentNode?.Name == node.Name)
-                .ToList();
-        }
+        public List<DestinationNode> GetChildNodes(DestinationNode node) =>
+            DestinationNodes.Where(destinationNode => 
+                destinationNode.ParentNode?.Name == node.Name)
+            .ToList();
 
         public static List<TypeNode> GetNodes(Type type, Func<MemberInfo, bool> predicate)
         {

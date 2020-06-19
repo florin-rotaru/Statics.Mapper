@@ -70,18 +70,91 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private void ReturnDefaultDestinationRootNode()
+        private void ReturnNewInstanceOrDefault()
         {
-            if (Schema.DestinationRootNode.NullableUnderlyingType != null)
+            DestinationNode destinationNode = Schema.DestinationRootNode;
+            SourceNode sourceNode = Schema.SourceRootNode;
+
+            if (destinationNode.NullableUnderlyingType != null)
             {
-                if (Schema.DestinationRootNode.NullableLocal != null)
+                destinationNode.Local = IL.DeclareLocal(destinationNode.NullableUnderlyingType);
+                destinationNode.NullableLocal = IL.DeclareLocal(destinationNode.Type);
+
+                IL.EmitInit(destinationNode.NullableLocal);
+            }
+            else
+            {
+                destinationNode.Local = IL.DeclareLocal(destinationNode.Type);
+
+                if (destinationNode.Type.IsValueType)
                 {
-                    IL.EmitLdloc(Schema.DestinationRootNode.NullableLocal.LocalIndex);
+                    IL.EmitInit(destinationNode.Local);
                 }
                 else
                 {
                     IL.Emit(OpCodes.Ldnull);
+                    IL.EmitStoreLocal(destinationNode.Local);
                 }
+            }
+
+            void newInstance()
+            {
+                if (destinationNode.NullableUnderlyingType != null)
+                {
+                    IL.EmitLoadLocal(destinationNode.NullableLocal, true);
+                    IL.EmitInit(destinationNode.Local);
+                    IL.EmitLoadLocal(destinationNode.Local, false);
+                    IL.Emit(OpCodes.Call, destinationNode.Type.GetConstructor(new Type[] { destinationNode.NullableUnderlyingType }));
+                }
+                else if (!destinationNode.Type.IsValueType)
+                {
+                    IL.EmitInit(destinationNode.Local);
+                }
+            }
+
+            void loadDestination()
+            {
+                if (destinationNode.NullableUnderlyingType != null)
+                    IL.EmitLoadLocal(destinationNode.NullableLocal, false);
+                else
+                    IL.EmitLoadLocal(destinationNode.Local, false);
+            }
+
+            if (sourceNode.NullableUnderlyingType != null)
+            {
+                IL.EmitLoadArgument(sourceNode.Type, 0);
+                IL.Emit(OpCodes.Call, sourceNode.Type.GetProperty(HasValue).GetGetMethod());
+                IL.EmitBrfalse_s(
+                    () => newInstance());
+
+                loadDestination();
+            }
+            else if (sourceNode.Type.IsValueType)
+            {
+                newInstance();
+
+                loadDestination();
+            }
+            else
+            {
+                IL.EmitLoadArgument(sourceNode.Type, 0);
+                IL.EmitBrfalse_s(
+                    () => newInstance());
+
+                loadDestination();
+            }
+
+            IL.Emit(OpCodes.Ret);
+        }
+
+        private void ReturnDefault()
+        {
+            if (Schema.DestinationRootNode.NullableUnderlyingType != null)
+            {
+                if (Schema.DestinationRootNode.NullableLocal != null)
+                    IL.EmitLdloc(Schema.DestinationRootNode.NullableLocal.LocalIndex);
+                else
+                    IL.Emit(OpCodes.Ldnull);
             }
             else
             {
@@ -131,7 +204,7 @@ namespace Air.Mapper.Internal
         private void SetAndReturnFromToBuiltIn()
         {
             IL.EmitLdarg(0);
-            IL.EmitSetOrConvert(Source.Type, Destination.Type);
+            IL.EmitConvert(Source.Type, Destination.Type);
             IL.Emit(OpCodes.Ret);
         }
 
@@ -142,7 +215,7 @@ namespace Air.Mapper.Internal
             if (Destination.Type.IsAbstract || Destination.Type.IsInterface)
             {
                 IL.EmitLdarg(0);
-                IL.EmitSetOrConvert(Source.Type, Destination.Type);
+                IL.EmitConvert(Source.Type, Destination.Type);
                 IL.Emit(OpCodes.Ret);
 
                 return;
@@ -165,8 +238,7 @@ namespace Air.Mapper.Internal
 
             if (!Schema.DestinationRootNode.Load)
             {
-                ReturnDefaultDestinationRootNode();
-
+                ReturnNewInstanceOrDefault();
                 return;
             }
 
@@ -181,7 +253,7 @@ namespace Air.Mapper.Internal
                 IL.EmitLdarga(0);
                 IL.Emit(OpCodes.Call, Schema.SourceRootNode.Type.GetProperty(HasValue).GetGetMethod());
 
-                IL.EmitBrtrue_s(() => ReturnDefaultDestinationRootNode());
+                IL.EmitBrtrue_s(() => ReturnDefault());
 
                 SetAndReturnDestinationRootNode();
 
@@ -208,7 +280,7 @@ namespace Air.Mapper.Internal
             SetDefaultDestinationRootNode();
 
             IL.EmitLdarg(0);
-            IL.EmitBrtrue_s(() => ReturnDefaultDestinationRootNode());
+            IL.EmitBrtrue_s(() => ReturnDefault());
 
             SetAndReturnDestinationRootNode();
 
