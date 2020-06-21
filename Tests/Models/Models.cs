@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Models
 {
@@ -85,6 +86,41 @@ namespace Models
             Collection.GetEnumerator();
     }
 
+    public class TDictionary<T> : IDictionary<int, T>
+    {
+        private Dictionary<int, T> Collection { get; set; }
+
+        //public TDictionary(IEnumerable<KeyValuePair<int, T>> collection)
+        //{
+        //    foreach (KeyValuePair<int, T> item in collection)
+        //        Collection.Add(item.Key, item.Value);
+        //}
+
+        public TDictionary(IDictionary<int, T> collection)
+        {
+            foreach (KeyValuePair<int, T> item in collection)
+                Collection.Add(item.Key, item.Value);
+        }
+
+        public T this[int key] { get => Collection[key]; set => Collection[key] = value; }
+        public ICollection<int> Keys => Collection.Keys;
+        public ICollection<T> Values => Collection.Values;
+        public int Count => Collection.Count;
+        public bool IsReadOnly => false;
+        public void Add(int key, T value) => Collection.Add(key, value);
+        public void Add(KeyValuePair<int, T> item) => Collection.Add(item.Key, item.Value);
+        public void Clear() => Collection.Clear();
+        public bool Contains(KeyValuePair<int, T> item) => Collection.ContainsKey(item.Key);
+        public bool ContainsKey(int key) => Collection.ContainsKey(key);
+        public void CopyTo(KeyValuePair<int, T>[] array, int arrayIndex) => throw new NotImplementedException();
+        public IEnumerator<KeyValuePair<int, T>> GetEnumerator() => Collection.GetEnumerator();
+        public bool Remove(int key) => Collection.Remove(key);
+        public bool Remove(KeyValuePair<int, T> item) => Collection.Remove(item.Key);
+        public bool TryGetValue(int key, [MaybeNullWhen(true)] out T value) => Collection.TryGetValue(key, out value);
+        IEnumerator IEnumerable.GetEnumerator() => Collection.GetEnumerator();
+    }
+
+
     public class TC1_I0_Array_Members { public TC0_I0_Members[] N0 { get; set; } }
     public class TC1_I1_HashSet_Members { public HashSet<TC0_I0_Members> N0 { get; set; } }
     public class TC1_I2_LinkedList_Members { public LinkedList<TC0_I0_Members> N0 { get; set; } }
@@ -96,6 +132,13 @@ namespace Models
     public class TC1_I8_ConcurrentQueue_Members { public ConcurrentQueue<TC0_I0_Members> N0 { get; set; } }
     public class TC1_I9_ConcurrentStack_Members { public ConcurrentStack<TC0_I0_Members> N0 { get; set; } }
     public class TC1_I10_TEnumerable_Members { public TEnumerable<TC0_I0_Members> N0 { get; set; } }
+
+    public class TC1_I11_Dictionary_Members { public Dictionary<int, TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I12_SortedDictionary_Members { public SortedDictionary<int, TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I13_SortedList_Members { public SortedList<int, TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I14_ConcurrentDictionary_Members { public ConcurrentDictionary<int, TC0_I0_Members> N0 { get; set; } }
+    public class TC1_I15_TDictionary_Members { public TDictionary<TC0_I0_Members> N0 { get; set; } }
+
 
     public struct TS1_I0_Array_Members { public TC0_I0_Members[] N0 { get; set; } }
     public struct TS1_I1_HashSet_Members { public HashSet<TC0_I0_Members> N0 { get; set; } }
@@ -109,9 +152,11 @@ namespace Models
     public struct TS1_I9_ConcurrentStack_Members { public ConcurrentStack<TC0_I0_Members> N0 { get; set; } }
     public struct TS1_I10_TEnumerable_Members { public TEnumerable<TC0_I0_Members> N0 { get; set; } }
 
-
-
-
+    public struct TS1_I11_Dictionary_Members { public Dictionary<int, TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I12_SortedDictionary_Members { public SortedDictionary<int, TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I13_SortedList_Members { public SortedList<int, TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I14_ConcurrentDictionary_Members { public ConcurrentDictionary<int, TC0_I0_Members> N0 { get; set; } }
+    public struct TS1_I15_TDictionary_Members { public TDictionary<TC0_I0_Members> N0 { get; set; } }
 
 
 

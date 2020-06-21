@@ -278,13 +278,6 @@ namespace Air.Mapper.Internal
             OnChange();
         }
 
-        public void ForEachSourceNode(Func<SourceNode, bool> predicate, Action<SourceNode> action)
-        {
-            for (int i = 0; i < SourceNodes.Count; i++)
-                if (predicate(SourceNodes[i]))
-                    action(SourceNodes[i]);
-        }
-
         public void ForEachDestinationNode(Func<DestinationNode, bool> predicate, Action<DestinationNode> action)
         {
             for (int i = 0; i < DestinationNodes.Count; i++)
@@ -326,59 +319,131 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private static bool IsCollection(Type type)
-        {
-            if (type.IsArray)
-                return true;
+        private static bool ImplementsGenericTypeInterface(Type type, Type genericTypeInterface) =>
+            type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == genericTypeInterface) != null;
 
-            if (!type.IsGenericType)
+        private static Type GetGenericTypeInterface(Type type, Type genericTypeInterface) =>
+            type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == genericTypeInterface);
+
+        private static bool IsCollection(Type type) =>
+            type.IsArray ||
+            ImplementsGenericTypeInterface(type, typeof(IEnumerable<>));
+
+        private static Type GetCollectionElementType(Type collectionType)
+        {
+            if (collectionType.IsArray)
+                return collectionType.GetElementType();
+            else
+                return GetGenericTypeInterface(collectionType, typeof(IEnumerable<>)).GenericTypeArguments[0];
+        }
+
+        private static bool CanMapCollectionElement(Type source, Type destination) =>
+            (TypeInfo.IsBuiltIn(source) || !TypeInfo.IsEnumerable(source)) &&
+            (TypeInfo.IsBuiltIn(destination) || !TypeInfo.IsEnumerable(destination)) &&
+            (TypeInfo.IsBuiltIn(source) == TypeInfo.IsBuiltIn(destination));
+
+
+        private static bool CanMapKVPCollection(
+            Type sourceElementType,
+            Type destinationCollectionType,
+            ref System.Reflection.ConstructorInfo constructorInfo)
+        {
+            bool parameterTypeArgumentPredicate(Type argument) =>
+                    argument.IsGenericType &&
+                    argument.GetGenericTypeDefinition() == typeof(KeyValuePair<,>);
+
+            bool parameterTypePredicate(Type parameterType) =>
+                parameterType.IsGenericType &&
+                ((
+                    parameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) &&
+                    parameterTypeArgumentPredicate(parameterType.GenericTypeArguments[0])
+                ) ||
+                (
+                    ImplementsGenericTypeInterface(parameterType, typeof(IEnumerable<>)) &&
+                    parameterTypeArgumentPredicate(GetGenericTypeInterface(parameterType, typeof(IEnumerable<>)).GenericTypeArguments[0])
+                ));
+
+            bool parametersPredicate(System.Reflection.ParameterInfo[] parameters) =>
+                parameters.Length == 1 &&
+                parameterTypePredicate(parameters[0].ParameterType);
+
+            constructorInfo = destinationCollectionType.GetConstructors().FirstOrDefault(c => parametersPredicate(c.GetParameters()));
+
+            if (constructorInfo == null)
                 return false;
 
-            if (type.GenericTypeArguments.Length == 1)
-            {
-                if (!type.GetInterfaces().Where(i => i.IsGenericType).Select(i => i.GetGenericTypeDefinition()).Contains(typeof(IEnumerable<>)))
-                    return false;
+            Type constructorParameterType = constructorInfo.GetParameters()[0].ParameterType;
+            Type[] destinationArguments = constructorParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ?
+                constructorParameterType.GenericTypeArguments[0].GenericTypeArguments :
+                GetGenericTypeInterface(constructorParameterType, typeof(IEnumerable<>)).GenericTypeArguments[0].GenericTypeArguments;
 
-                return type.GetConstructors().FirstOrDefault(c =>
-                    c.GetParameters().Length == 1 &&
-                    c.GetParameters()[0].ParameterType.IsGenericType &&
-                    c.GetParameters()[0].ParameterType.GenericTypeArguments.Length == 1 &&
-                    c.GetParameters()[0].ParameterType.GenericTypeArguments[0] == type.GenericTypeArguments[0] &&
-                    typeof(IEnumerable<>).IsAssignableFrom(c.GetParameters()[0].ParameterType.GetGenericTypeDefinition())) != null;
-            }
+            return CanMapCollectionElement(sourceElementType.GetGenericArguments()[0], destinationArguments[0]) &&
+                CanMapCollectionElement(sourceElementType.GetGenericArguments()[1], destinationArguments[1]);
+        }
 
-            if (type.GenericTypeArguments.Length == 2)
-            {
-                if (!type.GetInterfaces().Where(i => i.IsGenericType).Select(i => i.GetGenericTypeDefinition()).Contains(typeof(IDictionary<,>)))
-                    return false;
+        private static bool CanMapEnumerableCollection(
+            Type sourceElementType,
+            Type destinationCollectionType,
+            ref System.Reflection.ConstructorInfo constructorInfo)
+        {
+            if (destinationCollectionType.IsArray)
+                return CanMapCollectionElement(sourceElementType, destinationCollectionType.GetElementType());
 
-                return type.GetInterfaces().Where(i => i.IsGenericType).Select(i => i.GetGenericTypeDefinition()).Contains(typeof(IDictionary<,>)) &&
-                    type.GetConstructors().FirstOrDefault(c =>
-                    c.GetParameters().Length == 1 &&
-                    c.GetParameters()[0].ParameterType.IsGenericType &&
-                    c.GetParameters()[0].ParameterType.GenericTypeArguments.Length == 2 &&
-                    c.GetParameters()[0].ParameterType.GenericTypeArguments[0] == type.GenericTypeArguments[0] &&
-                    c.GetParameters()[0].ParameterType.GenericTypeArguments[1] == type.GenericTypeArguments[1] &&
-                    typeof(IDictionary<,>).IsAssignableFrom(c.GetParameters()[0].ParameterType.GetGenericTypeDefinition())) != null;
-            }
+            bool parameterTypePredicate(Type parameterType) =>
+                parameterType.IsGenericType &&
+                (
+                    parameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
+                    ImplementsGenericTypeInterface(parameterType, typeof(IEnumerable<>))
+                );
+
+            bool parametersPredicate(System.Reflection.ParameterInfo[] parameters) =>
+                parameters.Length == 1 &&
+                parameterTypePredicate(parameters[0].ParameterType);
+
+            constructorInfo = destinationCollectionType.GetConstructors().FirstOrDefault(c => parametersPredicate(c.GetParameters()));
+
+            if (constructorInfo == null)
+                return false;
+
+            Type constructorParameterType = constructorInfo.GetParameters()[0].ParameterType;
+            Type destinationArgument = constructorParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ?
+                constructorParameterType.GenericTypeArguments[0] :
+                GetGenericTypeInterface(constructorParameterType, typeof(IEnumerable<>)).GenericTypeArguments[0];
+
+            return CanMapCollectionElement(sourceElementType, destinationArgument);
+        }
+
+        private static bool CanMapCollection(
+            Type sourceCollectionType,
+            Type destinationCollectionType,
+            ref System.Reflection.ConstructorInfo constructorInfo)
+        {
+            Type sourceElementType = GetCollectionElementType(sourceCollectionType);
+
+            if (sourceElementType.IsGenericType && sourceElementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
+                return CanMapKVPCollection(sourceElementType, destinationCollectionType, ref constructorInfo);
+            else if (!sourceElementType.IsGenericType ||
+                (sourceElementType.GetGenericTypeDefinition() != typeof(IEnumerable<>) &&
+                !ImplementsGenericTypeInterface(sourceElementType, typeof(IEnumerable<>))))
+                return CanMapEnumerableCollection(sourceElementType, destinationCollectionType, ref constructorInfo);
 
             return false;
         }
 
-        private static bool CanReadCollection(MemberInfo sourceNodeMember) =>
-            sourceNodeMember.HasGetMethod && IsCollection(sourceNodeMember.Type);
+        public static bool CanLoadAndSetCollection(
+            MemberInfo sourceMember,
+            MemberInfo destinationMember,
+            out System.Reflection.ConstructorInfo constructorInfo)
+        {
+            constructorInfo = null;
 
-        private static bool CanMaintainCollection(MemberInfo destinationNodeMember) =>
-            destinationNodeMember.HasSetMethod && IsCollection(destinationNodeMember.Type);
+            if (!(sourceMember.HasGetMethod &&
+                destinationMember.HasSetMethod &&
+                !destinationMember.Type.IsInterface))
+                return false;
 
-        public static bool CanLoadAndSetCollectionValue(
-            MemberInfo sourceNodeMember,
-            MemberInfo destinationNodeMember) =>
-                CanReadCollection(sourceNodeMember) &&
-                CanMaintainCollection(destinationNodeMember) &&
-                !destinationNodeMember.Type.IsInterface &&
-                (sourceNodeMember.Type.IsArray || sourceNodeMember.Type.GenericTypeArguments.Length == 1) ==
-                (destinationNodeMember.Type.IsArray || destinationNodeMember.Type.GenericTypeArguments.Length == 1);
+            return CanMapCollection(sourceMember.Type, destinationMember.Type, ref constructorInfo);
+        }
 
         private bool TryMapMember(
             SourceNode sourceNode,
@@ -386,33 +451,21 @@ namespace Air.Mapper.Internal
             DestinationNode destinationNode,
             DestinationNodeMember destinationNodeMember)
         {
-            if (ILGenerator.CanEmitLoadAndSetValue(sourceNodeMember, destinationNodeMember.Info))
-            {
-                destinationNodeMember.IsCollection = IsCollection(destinationNodeMember.Info.Type);
-                destinationNodeMember.Map = true;
-                destinationNodeMember.SourceNode = sourceNode;
-                destinationNodeMember.SourceNodeMember = sourceNodeMember;
-                destinationNodeMember.Status = Status.Successful;
-                LoadDestinationNodePath(destinationNode);
-                return true;
-            }
-
-            if (CanLoadAndSetCollectionValue(sourceNodeMember, destinationNodeMember.Info))
-            {
-                destinationNodeMember.IsCollection = true;
-                destinationNodeMember.Map = true;
-                destinationNodeMember.SourceNode = sourceNode;
-                destinationNodeMember.SourceNodeMember = sourceNodeMember;
-                destinationNodeMember.Status = Status.Successful;
-                LoadDestinationNodePath(destinationNode);
-                return true;
-            }
-
-            destinationNodeMember.Map = false;
             destinationNodeMember.SourceNode = sourceNode;
             destinationNodeMember.SourceNodeMember = sourceNodeMember;
             destinationNodeMember.Status = Status.Failed;
-            return false;
+            destinationNodeMember.IsCollection = !destinationNodeMember.Info.IsBuiltIn && IsCollection(destinationNodeMember.Info.Type);
+            destinationNodeMember.Map = !destinationNodeMember.IsCollection ?
+                ILGenerator.CanEmitLoadAndSetValue(sourceNodeMember, destinationNodeMember.Info) :
+                CanLoadAndSetCollection(sourceNodeMember, destinationNodeMember.Info, out System.Reflection.ConstructorInfo constructorInfo);
+
+            if (destinationNodeMember.Map)
+            {
+                destinationNodeMember.Status = Status.Successful;
+                LoadDestinationNodePath(destinationNode);
+            }
+
+            return destinationNodeMember.Map;
         }
 
         public static string NodeMemberName(string nodeName, string memberName) =>
@@ -571,7 +624,7 @@ namespace Air.Mapper.Internal
 
         public SourceNode GetParentNode(SourceNode node) =>
             node.Name != string.Empty ? SourceNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(node.Name)) : null;
-        
+
         public List<SourceNode> GetParentNodes(SourceNode node)
         {
             List<SourceNode> returnValue = new List<SourceNode>();
@@ -636,7 +689,7 @@ namespace Air.Mapper.Internal
             .ToList();
 
         public List<DestinationNode> GetChildNodes(DestinationNode node) =>
-            DestinationNodes.Where(destinationNode => 
+            DestinationNodes.Where(destinationNode =>
                 destinationNode.ParentNode?.Name == node.Name)
             .ToList();
 

@@ -7,7 +7,7 @@ namespace Playground
     public class ReturnDefault
     {
         [Fact]
-        public void From_NTS1C0_I0_Members_To_TC1C0_I0_Members()
+        public void From_NS1C0_I0_Members_To_C1C0_I0_Members()
         {
             var source = new TS1C0_I0_Members?();
             var mapFunc = Mapper<TS1C0_I0_Members?, TC1C0_I0_Members>.CompileFunc();
@@ -25,7 +25,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_NTS1C0_I0_Members_To_TS1C0_I0_Members()
+        public void From_NS1C0_I0_Members_To_S1C0_I0_Members()
         {
             var source = new TS1C0_I0_Members?();
             var mapFunc = Mapper<TS1C0_I0_Members?, TS1C0_I0_Members>.CompileFunc();
@@ -43,7 +43,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_NTS1C0_I0_Members_To_NTS1C0_I0_Members()
+        public void From_NS1C0_I0_Members_To_NTS1C0_I0_Members()
         {
             var source = new TS1C0_I0_Members?();
             var mapFunc = Mapper<TS1C0_I0_Members?, TS1C0_I0_Members?>.CompileFunc();
@@ -62,7 +62,7 @@ namespace Playground
 
 
         [Fact]
-        public void From_TC1C0_I0_Members_To_TC1C0_I0_Members()
+        public void From_C1C0_I0_Members_To_C1C0_I0_Members()
         {
             var source = new TC1C0_I0_Members();
             var mapFunc = Mapper<TC1C0_I0_Members, TC1C0_I0_Members>.CompileFunc();
@@ -84,7 +84,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_TC1C0_I0_Members_To_TS1C0_I0_Members()
+        public void From_C1C0_I0_Members_To_S1C0_I0_Members()
         {
             var source = new TC1C0_I0_Members();
             var mapFunc = Mapper<TC1C0_I0_Members, TS1C0_I0_Members>.CompileFunc();
@@ -106,7 +106,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_TC1C0_I0_Members_To_NTS1C0_I0_Members()
+        public void From_C1C0_I0_Members_To_NTS1C0_I0_Members()
         {
             var source = new TC1C0_I0_Members();
             var mapFunc = Mapper<TC1C0_I0_Members, TS1C0_I0_Members?>.CompileFunc();

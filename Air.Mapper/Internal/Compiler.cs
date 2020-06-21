@@ -530,10 +530,7 @@ namespace Air.Mapper.Internal
 
         #region Mapper.To*Collection
 
-        private bool ImplementsGenericTypeInterface(Type type, Type genericTypeInterface) =>
-            type.GetInterfaces().Where(i => i.IsGenericType).Select(i => i.GetGenericTypeDefinition()).Contains(genericTypeInterface);
-
-        private Type GetCollectionElementType(Type collectionType) =>
+        private Type GetEnumerableElementType(Type collectionType) =>
             collectionType.IsArray ? collectionType.GetElementType() :
                 collectionType.GenericTypeArguments.Length == 1 ?
                     collectionType.GenericTypeArguments[0] :
@@ -546,17 +543,24 @@ namespace Air.Mapper.Internal
         private string GetMapperToCollectionMethodName(Type collectionType) =>
             collectionType.IsArray ? ToArray : $"{To}{collectionType.GetGenericTypeDefinition().Name.Split('`')[0]}";
 
-        private Type MakeArrayType(Type type) =>
-          type.IsArray ? type : type.GenericTypeArguments[0].MakeArrayType();
+        private Type MakeArrayType(Type fromCollectionType) =>
+          fromCollectionType.IsArray ? fromCollectionType : fromCollectionType.GenericTypeArguments[0].MakeArrayType();
 
-        private Type MakeGenericIEnumerableType(Type collectionType) =>
-            typeof(IEnumerable<>).MakeGenericType(new[] { GetCollectionElementType(collectionType) });
+        private Type MakeGenericIEnumerableType(Type fromCollectionType) =>
+            typeof(IEnumerable<>).MakeGenericType(new[] { GetEnumerableElementType(fromCollectionType) });
 
-        private Type MakeGenericIDictionaryType(Type iDictionaryCollectionType) =>
+        private Type MakeGenericIDictionaryType(Type fromCollectionType) =>
             typeof(IDictionary<,>).MakeGenericType(new[]
             {
-                iDictionaryCollectionType.GenericTypeArguments[0],
-                iDictionaryCollectionType.GenericTypeArguments[1]
+                fromCollectionType.GenericTypeArguments[0],
+                fromCollectionType.GenericTypeArguments[1]
+            });
+
+        private Type MakeGenericDictionaryType(Type fromCollectionType) =>
+            typeof(IDictionary<,>).MakeGenericType(new[]
+            {
+                fromCollectionType.GenericTypeArguments[0],
+                fromCollectionType.GenericTypeArguments[1]
             });
 
         private Type GetCollectionConstructorParameterType(Type collectionType)
@@ -575,18 +579,54 @@ namespace Air.Mapper.Internal
 
         private MethodInfo GetMapperToKVPCollectionTypeMethod(Type sourceType, Type destinationType)
         {
-            return null;
+            MethodInfo[] methods = typeof(Mapper<,>).MakeGenericType(new[]
+               {
+                    sourceType.GenericTypeArguments[1],
+                    destinationType.GenericTypeArguments[1]
+                })
+              .GetMethods(BindingFlags.Public | BindingFlags.Static);
+
+            bool parameterTypePredicate(Type parameterType) =>
+                parameterType.IsGenericType &&
+                parameterType.GenericTypeArguments.Length == 2 &&
+                parameterType.GetGenericTypeDefinition() == typeof(IDictionary<,>);
+
+            bool parametersPredicate(ParameterInfo[] parameters) =>
+                parameters.Length == 1 &&
+                parameterTypePredicate(parameters[0].ParameterType);
+
+            MethodInfo method = methods.FirstOrDefault(m =>
+                    m.Name == GetMapperToCollectionMethodName(destinationType) &&
+                    m.IsGenericMethod &&
+                    m.ReturnType.IsGenericType &&
+                    m.ReturnType.GetGenericTypeDefinition() == destinationType.GetGenericTypeDefinition() &&
+                    parametersPredicate(m.GetParameters())) ??
+                methods.Single(m =>
+                    m.Name == nameof(Mapper<S, D>.ToDictionary) &&
+                    m.IsGenericMethod &&
+                    m.ReturnType.IsGenericType &&
+                    m.ReturnType.GetGenericTypeDefinition() == typeof(Dictionary<,>) &&
+                    parametersPredicate(m.GetParameters()));
+
+            return method.MakeGenericMethod(new[]
+            {
+                sourceType.GenericTypeArguments[0],
+                destinationType.GenericTypeArguments[0]
+            });
         }
 
         private MethodInfo GetMapperToCollectionTypeMethod(Type sourceType, Type destinationType)
         {
+            // todo review
+
+
             if (destinationType.GenericTypeArguments.Length == 2)
                 return GetMapperToKVPCollectionTypeMethod(sourceType, destinationType);
 
             MethodInfo[] methods = typeof(Mapper<,>).MakeGenericType(new[]
                 {
-                    GetCollectionElementType(sourceType),
-                    GetCollectionElementType(destinationType)
+                    GetEnumerableElementType(sourceType),
+                    GetEnumerableElementType(destinationType)
                 })
                .GetMethods(BindingFlags.Public | BindingFlags.Static);
 

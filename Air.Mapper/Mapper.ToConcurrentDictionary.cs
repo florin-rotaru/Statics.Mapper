@@ -1,19 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Air.Mapper
 {
     public static partial class Mapper<S, D>
     {
-        public static Dictionary<DK, D> ToDictionary<SK, DK>(IEnumerable<KeyValuePair<SK, S>> source)
+        public static ConcurrentDictionary<DK, D> ToConcurrentDictionary<SK, DK>(IEnumerable<KeyValuePair<SK, S>> source)
         {
-            Dictionary<DK, D> returnValue = null;
+            ConcurrentDictionary<DK, D> returnValue = null;
             if (source == null)
                 return returnValue;
 
-            returnValue = new Dictionary<DK, D>();
+            returnValue = new ConcurrentDictionary<DK, D>();
 
             foreach (KeyValuePair<SK, S> sourceEntry in source)
-                returnValue.Add(
+                returnValue.TryAdd(
                     Mapper<SK, DK>.Map(sourceEntry.Key),
                     CompiledFunc(sourceEntry.Value));
 

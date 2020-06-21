@@ -4,13 +4,13 @@ namespace Air.Mapper
 {
     public static partial class Mapper<S, D>
     {
-        public static Dictionary<DK, D> ToDictionary<SK, DK>(IEnumerable<KeyValuePair<SK, S>> source)
+        public static SortedList<DK, D> ToSortedList<SK, DK>(IEnumerable<KeyValuePair<SK, S>> source)
         {
-            Dictionary<DK, D> returnValue = null;
+            SortedList<DK, D> returnValue = null;
             if (source == null)
                 return returnValue;
 
-            returnValue = new Dictionary<DK, D>();
+            returnValue = new SortedList<DK, D>();
 
             foreach (KeyValuePair<SK, S> sourceEntry in source)
                 returnValue.Add(

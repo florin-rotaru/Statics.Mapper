@@ -7,7 +7,7 @@ namespace Playground
     public class EmptyTypes
     {
         [Fact]
-        public void From_TC0_Empty_To_TC0_Empty()
+        public void From_C0_Empty_To_C0_Empty()
         {
             var source = new TC0_Empty();
             var mapFunc = Mapper<TC0_Empty, TC0_Empty>.CompileFunc();
@@ -33,7 +33,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_TC0_Empty_To_TS0_Empty()
+        public void From_C0_Empty_To_S0_Empty()
         {
             var source = new TC0_Empty();
             var mapFunc = Mapper<TC0_Empty, TS0_Empty>.CompileFunc();
@@ -48,7 +48,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_TS0_Empty_To_TC0_Empty()
+        public void From_S0_Empty_To_C0_Empty()
         {
             var source = new TS0_Empty();
             var mapFunc = Mapper<TS0_Empty, TC0_Empty>.CompileFunc();
@@ -63,7 +63,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_TS0_Empty_To_TS0_Empty()
+        public void From_S0_Empty_To_S0_Empty()
         {
             var source = new TS0_Empty();
             var mapFunc = Mapper<TS0_Empty, TS0_Empty>.CompileFunc();
@@ -74,7 +74,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_TC0_Empty_To_NTS0_Empty()
+        public void From_C0_Empty_To_NTS0_Empty()
         {
             var source = new TC0_Empty();
             var mapFunc = Mapper<TC0_Empty, TS0_Empty?>.CompileFunc();
@@ -100,7 +100,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_TS0_Empty_To_NTS0_Empty()
+        public void From_S0_Empty_To_NTS0_Empty()
         {
             var source = new TS0_Empty();
             var mapFunc = Mapper<TS0_Empty, TS0_Empty?>.CompileFunc();
@@ -116,7 +116,7 @@ namespace Playground
 
 
         [Fact]
-        public void From_NSTS0_Empty_To_TC0_Empty()
+        public void From_NSTS0_Empty_To_C0_Empty()
         {
             var source = new TS0_Empty?(new TS0_Empty());
             var mapFunc = Mapper<TS0_Empty?, TC0_Empty>.CompileFunc();
@@ -142,7 +142,7 @@ namespace Playground
         }
 
         [Fact]
-        public void From_NSTS0_Empty_To_TS0_Empty()
+        public void From_NSTS0_Empty_To_S0_Empty()
         {
             var source = new TS0_Empty?(new TS0_Empty());
             var mapFunc = Mapper<TS0_Empty?, TS0_Empty>.CompileFunc();
