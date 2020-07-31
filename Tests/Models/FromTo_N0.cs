@@ -60,16 +60,23 @@ namespace Internal
                 JsonConvert.SerializeObject(destination) != null;
         }
 
-        private void AssertEqualsOrDefaultReadonly<D>(S source, D destination) where D : new()
+        private void AssertInstanceOrDefaultReadonly<D>(S source, D destination) where D : new()
         {
             Assert.True(CanSerialize(source, destination));
 
-            if (Nullable.GetUnderlyingType(typeof(D)) != null)
-                Assert.Null(destination);
-            else if (typeof(D).IsValueType)
-                Assert.True(CompareEquals(new D(), destination));
+            if (source != null)
+            {
+                Assert.NotNull(destination);
+            }
             else
-                Assert.Null(destination);
+            {
+                if (Nullable.GetUnderlyingType(typeof(D)) != null)
+                    Assert.Null(destination);
+                else if (typeof(D).IsValueType)
+                    Assert.True(CompareEquals(new D(), destination));
+                else
+                    Assert.Null(destination);
+            }
         }
 
         private void AssertEqualsOrDefault<D>(
@@ -91,10 +98,10 @@ namespace Internal
             bool hasReadonlyMembers) where D : new()
         {
             if (hasReadonlyMembers)
-                AssertEqualsOrDefaultReadonly(source, destination);
-
-            if (hasReadonlyMembers)
+            {
+                AssertInstanceOrDefaultReadonly(source, destination);
                 return;
+            }           
 
             Assert.True(CanSerialize(source, destination));
 
@@ -104,49 +111,16 @@ namespace Internal
                 Assert.True(CompareEquals(source, destination));
         }
 
-        private void AssertDefaultReadonly<D>(S source, D destination) where D : new()
-        {
-            Assert.True(CanSerialize(source, destination));
-
-            if (Nullable.GetUnderlyingType(typeof(S)) != null)
-            {
-                if (Nullable.GetUnderlyingType(typeof(D)) != null)
-                    Assert.Null(destination);
-                else if (typeof(D).IsValueType)
-                    Assert.True(CompareEquals(new D(), destination));
-                else
-                    Assert.Null(destination);
-            }
-            else if (typeof(S).IsValueType)
-            {
-                if (Nullable.GetUnderlyingType(typeof(D)) != null)
-                    Assert.Null(destination);
-                else if (typeof(D).IsValueType)
-                    Assert.True(CompareEquals(new D(), destination));
-                else
-                    Assert.Null(destination);
-            }
-            else
-            {
-                if (Nullable.GetUnderlyingType(typeof(D)) != null)
-                    Assert.Null(destination);
-                else if (typeof(D).IsValueType)
-                    Assert.True(CompareEquals(new D(), destination));
-                else
-                    Assert.Null(destination);
-            }
-        }
-
         private void AssertDefault<D>(
             S source,
             D destination,
             bool hasReadonlyMembers) where D : new()
         {
             if (hasReadonlyMembers)
-                AssertDefaultReadonly(source, destination);
-
-            if (hasReadonlyMembers)
+            {
+                AssertInstanceOrDefaultReadonly(source, destination);
                 return;
+            }
 
             Assert.True(CanSerialize(source, destination));
 
@@ -316,6 +290,8 @@ namespace Internal
             // =======
             var mapActionRef = Mapper<S, D>.CompileActionRef();
             var mapFunc = Mapper<S, D>.CompileFunc();
+
+            var il = Mapper<S, D>.ViewActionRefIL();
 
             // =======
             S source = NewSource();

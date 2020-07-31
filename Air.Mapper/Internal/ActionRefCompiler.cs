@@ -1,10 +1,23 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection.Emit;
 
 namespace Air.Mapper.Internal
 {
-    internal class ActionRefCompiler<S, D> : Compiler<S, D>
+    internal class ActionRefCompiler : Compiler
     {
+        public ActionRefCompiler(Type sourceType, Type destinationType, MethodType methodType, List<IMapOption> mapOptions) : 
+            base(sourceType, destinationType, methodType, mapOptions) 
+        { }
+        //{
+        //    SourceType = sourceType;
+        //    DestinationType = destinationType;
+        //    MethodType = methodType;
+        //    MapOptions = mapOptions;
+        //}
+
+        private protected DynamicMethod Method { get; set; }
+
         private void SetAndReturnDestinationRootNode()
         {
             if (Schema.SourceRootNode.NullableUnderlyingType != null &&
@@ -58,7 +71,7 @@ namespace Air.Mapper.Internal
                 if (destinationNode.Type.IsValueType)
                 {
                     IL.EmitLoadArgument(destinationNode.Type, 1, true);
-                    IL.EmitInit(Destination.Type);
+                    IL.EmitInit(DestinationType);
                 }
                 else
                 {
@@ -157,7 +170,7 @@ namespace Air.Mapper.Internal
 
         private void CreateSignature(bool debug)
         {
-            Method = new DynamicMethod($"{nameof(Air)}{Guid.NewGuid():N}", null, new[] { Source.Type, Destination.Type.MakeByRefType() }, Source.Type.Module, skipVisibility: false);
+            Method = new DynamicMethod($"{nameof(Air)}{Guid.NewGuid():N}", null, new[] { SourceType, DestinationType.MakeByRefType() }, DestinationType.Module, skipVisibility: false);
             IL = new Reflection.Emit.ILGenerator(Method.GetILGenerator(), debug);
         }
 
@@ -165,11 +178,11 @@ namespace Air.Mapper.Internal
         {
             #region Destination: Abstract / Interface
 
-            if (Destination.Type.IsAbstract || Destination.Type.IsInterface)
+            if (DestinationType.IsAbstract || DestinationType.IsInterface)
             {
                 IL.EmitLdarg(1);
                 IL.EmitLdarg(0);
-                IL.EmitStore(Destination.Type);
+                IL.EmitStore(DestinationType);
 
                 IL.Emit(OpCodes.Ret);
 
@@ -180,12 +193,12 @@ namespace Air.Mapper.Internal
 
             #region Source: BuiltIn
 
-            if (Source.IsBuiltIn)
+            if (Reflection.TypeInfo.IsBuiltIn(SourceType))
             {
                 IL.EmitLdarg(1);
                 IL.EmitLdarg(0);
-                IL.EmitConvert(Source.Type, Destination.Type);
-                IL.EmitStore(Destination.Type);
+                IL.EmitConvert(SourceType, DestinationType);
+                IL.EmitStore(DestinationType);
 
                 IL.Emit(OpCodes.Ret);
 
@@ -242,7 +255,7 @@ namespace Air.Mapper.Internal
         }
 
         private void CompileMethod(bool debug)
-        {
+        {   
             CheckArguments();
 
             CreateSignature(debug);
@@ -251,16 +264,16 @@ namespace Air.Mapper.Internal
             CreateBody();
         }
 
-        public Mapper<S, D>.ActionRef Compile(Action<MapOptions<S, D>> mapOptions = null)
+        public DynamicMethod Compile(List<IMapOption> mapOptions = null)
         {
-            SetMapOptions(mapOptions);
+            MapOptions = mapOptions;
             CompileMethod(false);
-            return (Mapper<S, D>.ActionRef)Method.CreateDelegate(typeof(Mapper<S, D>.ActionRef));
+            return Method;
         }
 
-        public override string ViewIL(Action<MapOptions<S, D>> mapOptions = null)
+        public string ViewIL(List<IMapOption> mapOptions = null)
         {
-            SetMapOptions(mapOptions);
+            MapOptions = mapOptions;
             CompileMethod(true);
             return IL.GetLog().ToString();
         }

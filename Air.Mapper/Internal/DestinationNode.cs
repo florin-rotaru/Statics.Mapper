@@ -26,9 +26,6 @@ namespace Air.Mapper.Internal
 
         public int MembersMapCount { get; set; }
 
-        public bool UseMapper { get; set; }
-        public SourceNode SourceNode { get; set; }
-
         public DestinationNode(TypeNode node)
         {
             Name = node.Name;

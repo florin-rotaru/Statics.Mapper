@@ -6,13 +6,23 @@ using static Air.Compare.Members;
 
 namespace Playground
 {
-    public class Enumerables
+    public class Collections
     {
         private Fixture Fixture { get; }
 
-        public Enumerables()
+        public Collections()
         {
             Fixture = new Fixture();
+        }
+
+        [Fact]
+        public void Example()
+        {
+            var source = new TDictionary<TC0_I0_Members>();
+            Mapper<TC0_I0_Members, TC0_I0_Members>.ToDictionary<int, long>(source);
+
+            var destination = new TDictionary<TC0_I0_Members>(source ?? null);
+
         }
 
         [Fact]
@@ -70,7 +80,6 @@ namespace Playground
         [Fact]
         public void C1_I11_Dictionary_To_C1_I15_TDictionary()
         {
-
             var il = Mapper<TC1_I11_Dictionary_Members, TC1_I15_TDictionary_Members>.ViewFuncIL();
 
             var source = Fixture.Create<TC1_I11_Dictionary_Members>();

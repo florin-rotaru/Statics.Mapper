@@ -13,7 +13,6 @@ namespace Air.Mapper.Internal
         {
             Type = type;
             IsBuiltIn = TypeInfo.IsBuiltIn(type);
-            IsBuiltIn = TypeInfo.IsBuiltIn(type);
             UnderlyingType = Nullable.GetUnderlyingType(type);
         }
     }

@@ -2,7 +2,6 @@
 using AutoMapper;
 using BenchmarkDotNet.Attributes;
 using ExpressionDebugger;
-using ExpressMapper.Extensions;
 using Mapster;
 using Models;
 using System.Linq;
@@ -10,29 +9,29 @@ using System.Linq;
 namespace Benchmark
 {
     [InProcess]
+    [MemoryDiagnoser]
     public class From_Account_To_AccountDto
     {
         private readonly Account _source;
         private readonly IMapper _autoMapper;
         private readonly Fixture _fixture;
 
-        Account NewSource()
-        {
-            Account returnValue = _fixture.Create<Account>();
-
-            foreach (var order in returnValue.Orders)
-                order.DeliveryAccount = _fixture.Create<Account>();
-
-            return returnValue;
-        }
-
         public From_Account_To_AccountDto()
         {
             var il = Air.Mapper.Mapper<Account, AccountDto>.ViewFuncIL();
 
 
+            //_fixture = new Fixture();
+
+            //var theSource = new Dictionary<string, Dictionary<string, TC0_I0_Members>>
+            //{
+            //    { "1", new Dictionary<string, TC0_I0_Members>{{ "2", _fixture.Create<TC0_I0_Members>() } } }
+            //};
+            //var atDestination = theSource.Adapt<Dictionary<int, TC0_I0_Members>>();
+
+
             TypeAdapterConfig.GlobalSettings.SelfContainedCodeGeneration = true;
-            var cust = default(Account);
+            var account = default(Account);
             var def = new ExpressionDefinitions
             {
                 IsStatic = true,    //change to false if you want instance
@@ -40,11 +39,9 @@ namespace Benchmark
                 Namespace = "YourNamespace",
                 TypeName = "CustomerMapper"
             };
-            var code = cust.BuildAdapter()
+            var code = account.BuildAdapter()
                 .CreateMapExpression<AccountDto>()
                 .ToScript(def);
-
-
 
 
             _fixture = new Fixture();
@@ -55,7 +52,10 @@ namespace Benchmark
             var customization = new SupportMutableValueTypesCustomization();
             customization.Customize(_fixture);
 
-            _source = NewSource();
+            _source = _fixture.Create<Account>();
+
+            var destination = Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
+
 
             var mapperConfig = new MapperConfiguration(cfg =>
             {
@@ -80,13 +80,6 @@ namespace Benchmark
             ExpressMapper.Mapper.Register<Account, AccountDto>();
         }
 
-        [Benchmark]
-        public AccountDto AirMapperMap() => AirAccountMapper.Map(_source);
-
-        [Benchmark]
-        public AccountDto MapsterMapperMap() => AirAccountMapper.Map(_source);
-
-
         //[Benchmark]
         //public AccountDto ExpressMapperMap() => ExpressMapper.Mapper.Map<Account, AccountDto>(_source);
 
@@ -99,10 +92,17 @@ namespace Benchmark
         //[Benchmark]
         //public AccountDto AutoMapperMap() => _autoMapper.Map<AccountDto>(_source);
 
-        //[Benchmark]
-        //public AccountDto MapsterMap() => _source.Adapt<AccountDto>();
 
-        //[Benchmark]
-        //public AccountDto AirMapperMap() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
+        [Benchmark]
+        public AccountDto MapsterMap1() => _source.Adapt<AccountDto>();
+
+        [Benchmark]
+        public AccountDto AirMapperMap1() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
+
+        [Benchmark]
+        public AccountDto MapsterMap2() => _source.Adapt<AccountDto>();
+
+        [Benchmark]
+        public AccountDto AirMapperMap2() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
     }
 }

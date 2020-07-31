@@ -66,13 +66,21 @@ namespace Benchmark
         //public int List_ToArrayIterateForLoop()
         //   => CollectionToArray.List_ToArrayIterateForLoop(_sourceList);
 
-
         [Benchmark]
         public int IEnumerable_IterateForLoop()
-           => CollectionToArray.IEnumerable_IterateForLoop(_sourceList);
+           => CollectionToArray.IEnumerable_IterateForLoop(_sourceHashSet);
+
+
+        [Benchmark]
+        public int IEnumerable_IterateForLoop_v2()
+           => CollectionToArray.IEnumerable_IterateForLoop_v2(_sourceHashSet);
 
         [Benchmark]
         public int IEnumerable_ToArray_IterateForLoop()
-          => CollectionToArray.IEnumerable_ToArray_IterateForLoop(_sourceList);
+          => CollectionToArray.IEnumerable_ToArray_IterateForLoop(_sourceHashSet);
+
+        [Benchmark]
+        public int IEnumerable_ToArray_IterateForLoop_v2()
+        => CollectionToArray.IEnumerable_ToArray_IterateForLoop_v2(_sourceHashSet);
     }
 }

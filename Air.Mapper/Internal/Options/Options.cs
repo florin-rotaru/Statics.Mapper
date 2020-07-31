@@ -24,9 +24,9 @@ namespace Air.Mapper
             return this;
         }
 
-        public MapOptions<S, D> Map(Expression<Func<S, object>> source, Expression<Func<D, object>> destination, bool expand = true)
+        public MapOptions<S, D> Map(Expression<Func<S, object>> source, Expression<Func<D, object>> destination, bool inline = true, bool expand = true)
         {
-            Options.Add(new Option(nameof(Map), new object[] { TypeInfo.GetName(source, true), TypeInfo.GetName(destination, true), expand }));
+            Options.Add(new Option(nameof(Map), new object[] { TypeInfo.GetName(source, true), TypeInfo.GetName(destination, true), inline, expand }));
             return this;
         }
 

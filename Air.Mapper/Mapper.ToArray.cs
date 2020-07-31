@@ -16,12 +16,38 @@ namespace Air.Mapper
             return destination;
         }
 
+        private static KeyValuePair<DK, D>[] FromToKeyValuePairArray<SK, DK>(KeyValuePair<SK, S>[] source)
+        {
+            KeyValuePair<DK, D>[] destination = new KeyValuePair<DK, D>[source.Length];
+
+            for (int i = 0; i < source.Length; i++)
+                destination[i] = new KeyValuePair<DK, D>(
+                    Mapper<SK, DK>.Map(source[i].Key),
+                    CompiledFunc(source[i].Value));
+
+            return destination;
+        }
+
         public static D[] ToArray(S[] source)
         {
             if (source == null)
                 return null;
 
             return FromToArray(source);
+        }
+
+        public static KeyValuePair<DK, D>[] ToArray<SK, DK>(KeyValuePair<SK, S>[] source)
+        {
+            if (source == null)
+                return null;
+
+            return FromToKeyValuePairArray<SK, DK>(source);
+        }
+
+        public static KeyValuePair<DK, D>[] ToArray<SK, DK>(IEnumerable<KeyValuePair<SK, S>> source)
+        {
+            try { return FromToKeyValuePairArray<SK, DK>(source.ToArray()); }
+            catch { return null; }
         }
 
         public static D[] ToArray(HashSet<S> source)

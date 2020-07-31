@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Air.Compare" Version="1.0.5" />
+    <PackageReference Include="Air.Compare" Version="1.0.8" />
     <PackageReference Include="AutoFixture" Version="4.11.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.6.1" />
     <PackageReference Include="xunit" Version="2.4.1" />

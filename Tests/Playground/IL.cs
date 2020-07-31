@@ -79,12 +79,11 @@ namespace Playground
 
         public void IDictionaryCollection()
         {
-            var source = new Dictionary<string, string>();
-
-            var _0 = new Dictionary<string, string>(source);
-            var _1 = new SortedDictionary<string, string>(source);
-            var _2 = new SortedList<string, string>(source);
-            var _9 = new ConcurrentDictionary<string, string>(source);
+            var source = new Dictionary<string, string>(); 
+            var _0 = new Dictionary<string, string>(source); // ICollection
+            var _1 = new SortedDictionary<string, string>(source); // ICollection
+            var _2 = new SortedList<string, string>(source); // ICollection
+            var _9 = new ConcurrentDictionary<string, string>(source);  // ICollection
         }
 
         public void IListCollection()
@@ -101,7 +100,6 @@ namespace Playground
             var _8 = new ConcurrentBag<string>(source); // IProducerConsumerCollection
             var _9 = new ConcurrentQueue<string>(source); // IProducerConsumerCollection
             var _10 = new ConcurrentStack<string>(source); // IProducerConsumerCollection
-
         }
 
         [Fact]
@@ -194,7 +192,25 @@ namespace Playground
             il = Mapper<TC1SS0_I0_Members, TC1C0_I0_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N0.StringMember", "N0.StringMember"));
         }
 
-       
+
+
+        [Fact]
+        public void MC0_I0_Members()
+        {
+            var source = Fixture.Create<TMC0_I0_Members>();
+            var mapFunc = Mapper<TMC0_I0_Members, TMC0_I0_Members>.CompileFunc(o => o
+                .Ignore(i => i)
+                .Map(s => s.M0, d => d.M0)
+                .Map(s => s.M0.StringMember, d => d.M1.StringMember));
+
+            var il = Mapper<TMC0_I0_Members, TMC0_I0_Members>.ViewFuncIL(o => o
+                .Ignore(i => i)
+                .Map(s => s.M0, d => d.M0)
+                .Map(s => s.M0.StringMember, d => d.M1.StringMember));
+
+            var destination = mapFunc(source);
+        }
+
 
         [Fact]
         public void Collection()

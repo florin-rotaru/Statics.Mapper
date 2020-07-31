@@ -88,13 +88,15 @@ namespace Models
 
     public class TDictionary<T> : IDictionary<int, T>
     {
-        private Dictionary<int, T> Collection { get; set; }
+        private Dictionary<int, T> Collection { get; set; } = new Dictionary<int, T>();
 
-        //public TDictionary(IEnumerable<KeyValuePair<int, T>> collection)
-        //{
-        //    foreach (KeyValuePair<int, T> item in collection)
-        //        Collection.Add(item.Key, item.Value);
-        //}
+        public TDictionary() { }
+
+        public TDictionary(IEnumerable<KeyValuePair<int, T>> collection)
+        {
+            foreach (KeyValuePair<int, T> item in collection)
+                Collection.Add(item.Key, item.Value);
+        }
 
         public TDictionary(IDictionary<int, T> collection)
         {
@@ -112,7 +114,7 @@ namespace Models
         public void Clear() => Collection.Clear();
         public bool Contains(KeyValuePair<int, T> item) => Collection.ContainsKey(item.Key);
         public bool ContainsKey(int key) => Collection.ContainsKey(key);
-        public void CopyTo(KeyValuePair<int, T>[] array, int arrayIndex) => throw new NotImplementedException();
+        public void CopyTo(KeyValuePair<int, T>[] array, int arrayIndex) => ((ICollection)Collection).CopyTo(array, arrayIndex);
         public IEnumerator<KeyValuePair<int, T>> GetEnumerator() => Collection.GetEnumerator();
         public bool Remove(int key) => Collection.Remove(key);
         public bool Remove(KeyValuePair<int, T> item) => Collection.Remove(item.Key);
@@ -120,6 +122,13 @@ namespace Models
         IEnumerator IEnumerable.GetEnumerator() => Collection.GetEnumerator();
     }
 
+
+    public class TMC0_I0_Members
+    {
+        public TC0_I0_Members M0 { get; set; }
+        public TC0_I0_Members M1 { get; set; }
+        public TC0_I0_Members M2 { get; set; }
+    }
 
     public class TC1_I0_Array_Members { public TC0_I0_Members[] N0 { get; set; } }
     public class TC1_I1_HashSet_Members { public HashSet<TC0_I0_Members> N0 { get; set; } }

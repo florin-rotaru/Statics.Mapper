@@ -3,6 +3,7 @@ using Air.Reflection.Emit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Air.Mapper.Internal.Collections;
 
 namespace Air.Mapper.Internal
 {
@@ -50,23 +51,7 @@ namespace Air.Mapper.Internal
             SourceRootNode = SourceNodes.First(w => w.Depth == 0);
             DestinationRootNode = DestinationNodes.First(w => w.Depth == 0);
 
-            Map(SourceRootNode, DestinationRootNode, MapOptions.Count != 0);
-
-            if (MapOptions.Count == 0)
-            {
-                foreach (DestinationNode destinationNode in GetChildNodes(DestinationRootNode))
-                {
-                    foreach (SourceNode sourceNode in GetChildNodes(SourceRootNode, 1, n => n.Depth == destinationNode.Depth))
-                    {
-                        if (destinationNode.MemberInfo.Name == sourceNode.MemberInfo.Name)
-                        {
-                            MapperMap(sourceNode, destinationNode);
-                            break;
-                        }
-                    }
-                }
-            }
-
+            Map(SourceRootNode, DestinationRootNode, true);
             OnChange();
         }
 
@@ -86,13 +71,6 @@ namespace Air.Mapper.Internal
                         throw new NotImplementedException($"Option {MapOptions[i].Name} not implemented!");
                 }
             }
-        }
-
-        private void MapperMap(SourceNode sourceNode, DestinationNode destinationNode)
-        {
-            LoadDestinationNodePath(destinationNode);
-            destinationNode.SourceNode = sourceNode;
-            SetUseMapper(destinationNode, true);
         }
 
         private void Map(IMapOption option)
@@ -174,36 +152,25 @@ namespace Air.Mapper.Internal
             DestinationNode destinationNode = null;
             DestinationNodeMember destinationNodeMember = null;
 
+            if (sourceMemberIsNode != destinationMemberIsNode)
+                throw new InvalidOperationException();
+
             if (sourceMemberIsNode && destinationMemberIsNode)
             {
                 sourceNode = SourceNodes.First(w => w.Name == sourceMember);
                 destinationNode = DestinationNodes.First(w => w.Name == destinationMember);
 
-                if (expand &&
-                    sourceNode.Depth != 0 &&
-                    destinationNode.Depth != 0)
-                {
-                    MapperMap(sourceNode, destinationNode);
-                    OnChange();
-                }
-                else
-                {
-                    if (!EvaluateMap(sourceNode, destinationNode))
-                        throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
+                if (!EvaluateMap(sourceNode, destinationNode))
+                    throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
 
-                    Map(sourceNode, destinationNode, expand);
-                    SetUseMapper(destinationNode, false);
-                    OnChange();
-                }
+                Map(sourceNode, destinationNode, expand);
+                OnChange();
 
                 return;
             }
 
             try
             {
-                if (sourceMemberIsNode != destinationMemberIsNode)
-                    throw new InvalidOperationException();
-
                 sourceNode = SourceNodes.First(w => w.Name == TypeInfo.GetNodeName(sourceMember));
                 sourceNodeMember = sourceNode.Members.First(w => w.Name == TypeInfo.GetName(sourceMember));
 
@@ -220,7 +187,6 @@ namespace Air.Mapper.Internal
                     destinationNodeMember))
                     throw new InvalidOperationException();
 
-                SetUseMapper(destinationNode, false);
                 OnChange();
             }
             catch
@@ -243,9 +209,6 @@ namespace Air.Mapper.Internal
                 destinationNode.Members[i].Map = false;
 
             List<DestinationNode> childNodes = GetChildNodes(destinationNode, childNode => childNode.Load);
-
-            if (childNodes.Count == 0)
-                SetUseMapper(destinationNode, false);
 
             for (int i = 0; i < childNodes.Count; i++)
                 Ignore(childNodes[i]);
@@ -271,8 +234,6 @@ namespace Air.Mapper.Internal
                 if (member == null) continue;
 
                 member.Map = false;
-
-                SetUseMapper(node, false);
             }
 
             OnChange();
@@ -319,130 +280,91 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private static bool ImplementsGenericTypeInterface(Type type, Type genericTypeInterface) =>
-            type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == genericTypeInterface) != null;
-
-        private static Type GetGenericTypeInterface(Type type, Type genericTypeInterface) =>
-            type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == genericTypeInterface);
-
-        private static bool IsCollection(Type type) =>
-            type.IsArray ||
-            ImplementsGenericTypeInterface(type, typeof(IEnumerable<>));
-
-        private static Type GetCollectionElementType(Type collectionType)
-        {
-            if (collectionType.IsArray)
-                return collectionType.GetElementType();
-            else
-                return GetGenericTypeInterface(collectionType, typeof(IEnumerable<>)).GenericTypeArguments[0];
-        }
-
-        private static bool CanMapCollectionElement(Type source, Type destination) =>
+        private static bool CanMapEnumerableElement(Type source, Type destination) =>
             (TypeInfo.IsBuiltIn(source) || !TypeInfo.IsEnumerable(source)) &&
             (TypeInfo.IsBuiltIn(destination) || !TypeInfo.IsEnumerable(destination)) &&
             (TypeInfo.IsBuiltIn(source) == TypeInfo.IsBuiltIn(destination));
 
+        private static bool IEnumerableParameterArgumentPredicate(Type argument) =>
+            argument.IsGenericType &&
+            argument.GetGenericTypeDefinition() == typeof(KeyValuePair<,>);
 
-        private static bool CanMapKVPCollection(
+        private static bool CanMapToKeyValuePairCollection(
             Type sourceElementType,
-            Type destinationCollectionType,
-            ref System.Reflection.ConstructorInfo constructorInfo)
+            Type destinationCollectionType)
         {
-            bool parameterTypeArgumentPredicate(Type argument) =>
-                    argument.IsGenericType &&
-                    argument.GetGenericTypeDefinition() == typeof(KeyValuePair<,>);
-
-            bool parameterTypePredicate(Type parameterType) =>
-                parameterType.IsGenericType &&
-                ((
-                    parameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) &&
-                    parameterTypeArgumentPredicate(parameterType.GenericTypeArguments[0])
-                ) ||
-                (
-                    ImplementsGenericTypeInterface(parameterType, typeof(IEnumerable<>)) &&
-                    parameterTypeArgumentPredicate(GetGenericTypeInterface(parameterType, typeof(IEnumerable<>)).GenericTypeArguments[0])
-                ));
-
-            bool parametersPredicate(System.Reflection.ParameterInfo[] parameters) =>
-                parameters.Length == 1 &&
-                parameterTypePredicate(parameters[0].ParameterType);
-
-            constructorInfo = destinationCollectionType.GetConstructors().FirstOrDefault(c => parametersPredicate(c.GetParameters()));
+            System.Reflection.ConstructorInfo constructorInfo =
+                GetGenericIEnumerableParameterTypeConstructor(destinationCollectionType, IEnumerableParameterArgumentPredicate);
 
             if (constructorInfo == null)
                 return false;
 
-            Type constructorParameterType = constructorInfo.GetParameters()[0].ParameterType;
-            Type[] destinationArguments = constructorParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ?
-                constructorParameterType.GenericTypeArguments[0].GenericTypeArguments :
-                GetGenericTypeInterface(constructorParameterType, typeof(IEnumerable<>)).GenericTypeArguments[0].GenericTypeArguments;
+            Type[] destinationArguments = GetIEnumerableArgument(constructorInfo.GetParameters()[0].ParameterType).GenericTypeArguments;
 
-            return CanMapCollectionElement(sourceElementType.GetGenericArguments()[0], destinationArguments[0]) &&
-                CanMapCollectionElement(sourceElementType.GetGenericArguments()[1], destinationArguments[1]);
+            return CanMapEnumerableElement(sourceElementType.GetGenericArguments()[0], destinationArguments[0]) &&
+                CanMapEnumerableElement(sourceElementType.GetGenericArguments()[1], destinationArguments[1]);
         }
 
-        private static bool CanMapEnumerableCollection(
+        private static bool CanMapToCollection(
             Type sourceElementType,
-            Type destinationCollectionType,
-            ref System.Reflection.ConstructorInfo constructorInfo)
+            Type destinationCollectionType)
         {
             if (destinationCollectionType.IsArray)
-                return CanMapCollectionElement(sourceElementType, destinationCollectionType.GetElementType());
+                return CanMapEnumerableElement(sourceElementType, destinationCollectionType.GetElementType());
 
-            bool parameterTypePredicate(Type parameterType) =>
-                parameterType.IsGenericType &&
-                (
-                    parameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
-                    ImplementsGenericTypeInterface(parameterType, typeof(IEnumerable<>))
-                );
-
-            bool parametersPredicate(System.Reflection.ParameterInfo[] parameters) =>
-                parameters.Length == 1 &&
-                parameterTypePredicate(parameters[0].ParameterType);
-
-            constructorInfo = destinationCollectionType.GetConstructors().FirstOrDefault(c => parametersPredicate(c.GetParameters()));
+            System.Reflection.ConstructorInfo constructorInfo =
+                GetGenericIEnumerableParameterTypeConstructor(destinationCollectionType);
 
             if (constructorInfo == null)
                 return false;
 
-            Type constructorParameterType = constructorInfo.GetParameters()[0].ParameterType;
-            Type destinationArgument = constructorParameterType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ?
-                constructorParameterType.GenericTypeArguments[0] :
-                GetGenericTypeInterface(constructorParameterType, typeof(IEnumerable<>)).GenericTypeArguments[0];
+            Type destinationArgument = GetIEnumerableArgument(constructorInfo.GetParameters()[0].ParameterType);
 
-            return CanMapCollectionElement(sourceElementType, destinationArgument);
+            return CanMapEnumerableElement(sourceElementType, destinationArgument);
+        }
+
+        public static bool CanMapTypes(
+            Type sourceType,
+            Type destinationType)
+        {
+            if (IsCollection(sourceType) ||
+                IsCollection(destinationType))
+                return CanMapCollection(sourceType, destinationType);
+
+            if (destinationType.IsInterface || destinationType.IsAbstract)
+                return sourceType == destinationType;
+
+            if (TypeInfo.IsBuiltIn(destinationType))
+                return ILGenerator.CanEmitConvert(sourceType, destinationType);
+
+            return true;
         }
 
         private static bool CanMapCollection(
-            Type sourceCollectionType,
-            Type destinationCollectionType,
-            ref System.Reflection.ConstructorInfo constructorInfo)
+            Type sourceType,
+            Type destinationType)
         {
-            Type sourceElementType = GetCollectionElementType(sourceCollectionType);
+            if (IsCollection(sourceType) !=
+                IsCollection(destinationType))
+                return false;
 
-            if (sourceElementType.IsGenericType && sourceElementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
-                return CanMapKVPCollection(sourceElementType, destinationCollectionType, ref constructorInfo);
-            else if (!sourceElementType.IsGenericType ||
-                (sourceElementType.GetGenericTypeDefinition() != typeof(IEnumerable<>) &&
-                !ImplementsGenericTypeInterface(sourceElementType, typeof(IEnumerable<>))))
-                return CanMapEnumerableCollection(sourceElementType, destinationCollectionType, ref constructorInfo);
+            if (!CanMaintainCollection(destinationType))
+                return false;
 
-            return false;
+            return CanMapTypes(
+                GetIEnumerableArgument(sourceType),
+                GetIEnumerableArgument(destinationType));
         }
 
         public static bool CanLoadAndSetCollection(
             MemberInfo sourceMember,
-            MemberInfo destinationMember,
-            out System.Reflection.ConstructorInfo constructorInfo)
+            MemberInfo destinationMember)
         {
-            constructorInfo = null;
-
             if (!(sourceMember.HasGetMethod &&
-                destinationMember.HasSetMethod &&
-                !destinationMember.Type.IsInterface))
+                destinationMember.HasSetMethod))
                 return false;
 
-            return CanMapCollection(sourceMember.Type, destinationMember.Type, ref constructorInfo);
+            return CanMapCollection(sourceMember.Type, destinationMember.Type);
         }
 
         private bool TryMapMember(
@@ -454,10 +376,11 @@ namespace Air.Mapper.Internal
             destinationNodeMember.SourceNode = sourceNode;
             destinationNodeMember.SourceNodeMember = sourceNodeMember;
             destinationNodeMember.Status = Status.Failed;
-            destinationNodeMember.IsCollection = !destinationNodeMember.Info.IsBuiltIn && IsCollection(destinationNodeMember.Info.Type);
+            destinationNodeMember.IsCollection = IsCollection(destinationNodeMember.Info.Type);
+
             destinationNodeMember.Map = !destinationNodeMember.IsCollection ?
                 ILGenerator.CanEmitLoadAndSetValue(sourceNodeMember, destinationNodeMember.Info) :
-                CanLoadAndSetCollection(sourceNodeMember, destinationNodeMember.Info, out System.Reflection.ConstructorInfo constructorInfo);
+                CanLoadAndSetCollection(sourceNodeMember, destinationNodeMember.Info);
 
             if (destinationNodeMember.Map)
             {
@@ -486,19 +409,12 @@ namespace Air.Mapper.Internal
                 destinationNode.MembersMapCount =
                    destinationNode.Members.Count(n => n.Map && n.Status == Status.Successful);
 
-                if (destinationNode.UseMapper)
+                for (int m = 0; m < destinationNode.Members.Count; m++)
                 {
-                    LoadSourceNodePath(destinationNode.SourceNode);
-                }
-                else
-                {
-                    for (int m = 0; m < destinationNode.Members.Count; m++)
-                    {
-                        if (destinationNode.Members[m].Status != Status.Successful)
-                            continue;
+                    if (destinationNode.Members[m].Status != Status.Successful)
+                        continue;
 
-                        LoadSourceNodePath(destinationNode.Members[m].SourceNode);
-                    }
+                    LoadSourceNodePath(destinationNode.Members[m].SourceNode);
                 }
             }
         }
@@ -567,14 +483,6 @@ namespace Air.Mapper.Internal
                         node.Load = true;
                 }
             }
-        }
-
-        private void SetUseMapper(DestinationNode destinationNode, bool value)
-        {
-            foreach (DestinationNode parentNode in destinationNode.ParentNodes)
-                parentNode.UseMapper = false;
-
-            destinationNode.UseMapper = value;
         }
 
         private string ResolveDestinationMemberName(string memberName)

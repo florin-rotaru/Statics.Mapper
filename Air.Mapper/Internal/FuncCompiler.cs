@@ -1,11 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 
 namespace Air.Mapper.Internal
 {
-    internal class FuncCompiler<S, D> : Compiler<S, D>
+    internal class FuncCompiler : Compiler
     {
+        public FuncCompiler(Type sourceType, Type destinationType, MethodType methodType, List<IMapOption> mapOptions) :
+            base(sourceType, destinationType, methodType, mapOptions)
+        { }
+        //{
+        //    SourceType = sourceType;
+        //    DestinationType = destinationType;
+        //    MethodType = methodType;
+        //    MapOptions = mapOptions;
+        //}
+
+        private protected DynamicMethod Method { get; set; }
+
         private void SetAndReturnDestinationRootNode()
         {
             if (Schema.SourceRootNode.NullableUnderlyingType != null &&
@@ -27,47 +40,6 @@ namespace Air.Mapper.Internal
             MapSourceNodes(Schema.SourceRootNode);
 
             ReturnDestinationRootNode();
-        }
-
-        private void SetDefaultDestinationRootNode()
-        {
-            bool setNewDestinationRootNodeInstance = false;
-
-            SourceNode sourceNode = Schema.SourceRootNode;
-            while (sourceNode != null)
-            {
-                if (sourceNode.NullableUnderlyingType != null ||
-                    !sourceNode.Type.IsValueType)
-                    break;
-
-                if (MapsNodeMembers(sourceNode))
-                {
-                    setNewDestinationRootNodeInstance = true;
-                    break;
-                }
-
-                sourceNode =
-                    Schema.GetChildNodes(sourceNode, 1, sn => sn.Load).FirstOrDefault();
-            }
-
-            if (Schema.DestinationRootNode.NullableUnderlyingType != null)
-            {
-                IL.EmitLdloca(Schema.DestinationRootNode.NullableLocal.LocalIndex);
-                IL.EmitInit(Schema.DestinationRootNode.NullableLocal.LocalType);
-            }
-            else if (Schema.DestinationRootNode.Type.IsValueType)
-            {
-                IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
-                IL.EmitInit(Schema.DestinationRootNode.Local.LocalType);
-            }
-            else
-            {
-                if (!setNewDestinationRootNodeInstance)
-                {
-                    IL.Emit(OpCodes.Ldnull);
-                    IL.EmitStloc(Schema.DestinationRootNode.Local.LocalIndex);
-                }
-            }
         }
 
         private void ReturnNewInstanceOrDefault()
@@ -147,6 +119,47 @@ namespace Air.Mapper.Internal
             IL.Emit(OpCodes.Ret);
         }
 
+        private void SetDefaultDestinationRootNode()
+        {
+            bool setNewDestinationRootNodeInstance = false;
+
+            SourceNode sourceNode = Schema.SourceRootNode;
+            while (sourceNode != null)
+            {
+                if (sourceNode.NullableUnderlyingType != null ||
+                    !sourceNode.Type.IsValueType)
+                    break;
+
+                if (MapsNodeMembers(sourceNode))
+                {
+                    setNewDestinationRootNodeInstance = true;
+                    break;
+                }
+
+                sourceNode =
+                    Schema.GetChildNodes(sourceNode, 1, sn => sn.Load).FirstOrDefault();
+            }
+
+            if (Schema.DestinationRootNode.NullableUnderlyingType != null)
+            {
+                IL.EmitLdloca(Schema.DestinationRootNode.NullableLocal.LocalIndex);
+                IL.EmitInit(Schema.DestinationRootNode.NullableLocal.LocalType);
+            }
+            else if (Schema.DestinationRootNode.Type.IsValueType)
+            {
+                IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
+                IL.EmitInit(Schema.DestinationRootNode.Local.LocalType);
+            }
+            else
+            {
+                if (!setNewDestinationRootNodeInstance)
+                {
+                    IL.Emit(OpCodes.Ldnull);
+                    IL.EmitStloc(Schema.DestinationRootNode.Local.LocalIndex);
+                }
+            }
+        }
+
         private void ReturnDefault()
         {
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
@@ -197,14 +210,14 @@ namespace Air.Mapper.Internal
 
         private void CreateSignature(bool debug)
         {
-            Method = new DynamicMethod($"{nameof(Air)}{Guid.NewGuid():N}", Destination.Type, new[] { Source.Type }, Source.Type.Module, skipVisibility: false);
+            Method = new DynamicMethod($"{nameof(Air)}{Guid.NewGuid():N}", DestinationType, new[] { SourceType }, DestinationType.Module, skipVisibility: false);
             IL = new Reflection.Emit.ILGenerator(Method.GetILGenerator(), debug);
         }
 
         private void SetAndReturnFromToBuiltIn()
         {
             IL.EmitLdarg(0);
-            IL.EmitConvert(Source.Type, Destination.Type);
+            IL.EmitConvert(SourceType, DestinationType);
             IL.Emit(OpCodes.Ret);
         }
 
@@ -212,10 +225,10 @@ namespace Air.Mapper.Internal
         {
             #region Destination: Abstract / Interface
 
-            if (Destination.Type.IsAbstract || Destination.Type.IsInterface)
+            if (DestinationType.IsAbstract || DestinationType.IsInterface)
             {
                 IL.EmitLdarg(0);
-                IL.EmitConvert(Source.Type, Destination.Type);
+                IL.EmitConvert(SourceType, DestinationType);
                 IL.Emit(OpCodes.Ret);
 
                 return;
@@ -225,7 +238,7 @@ namespace Air.Mapper.Internal
 
             #region Source: BuiltIn
 
-            if (Source.IsBuiltIn)
+            if (Reflection.TypeInfo.IsBuiltIn(SourceType))
             {
                 SetAndReturnFromToBuiltIn();
 
@@ -298,16 +311,16 @@ namespace Air.Mapper.Internal
             CreateBody();
         }
 
-        public Func<S, D> Compile(Action<MapOptions<S, D>> mapOptions = null)
+        public DynamicMethod Compile(List<IMapOption> mapOptions = null)
         {
-            SetMapOptions(mapOptions);
+            MapOptions = mapOptions;
             CompileMethod(false);
-            return (Func<S, D>)Method.CreateDelegate(typeof(Func<S, D>));
+            return Method;
         }
 
-        public override string ViewIL(Action<MapOptions<S, D>> mapOptions = null)
+        public string ViewIL(List<IMapOption> mapOptions = null)
         {
-            SetMapOptions(mapOptions);
+            MapOptions = mapOptions;
             CompileMethod(true);
             return IL.GetLog().ToString();
         }
