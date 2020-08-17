@@ -1,21 +1,17 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Reflection.Emit;
-using static Air.Mapper.Internal.Collections;
 
 namespace Air.Mapper.Internal
 {
-    internal class Compiler
+    internal partial class Compiler
     {
         public Compiler(
             Type sourceType,
             Type destinationType,
             MethodType methodType,
-            List<IMapOption> mapOptions)
+            IEnumerable<IMapOption> mapOptions)
         {
             SourceType = sourceType;
             DestinationType = destinationType;
@@ -27,7 +23,7 @@ namespace Air.Mapper.Internal
         private protected Type SourceType { get; set; }
         private protected Type DestinationType { get; set; }
         private protected MethodType MethodType { get; set; }
-        private protected List<IMapOption> MapOptions { get; set; }
+        private protected IEnumerable<IMapOption> MapOptions { get; set; }
         private protected Reflection.Emit.ILGenerator IL { get; set; }
         private protected Schema Schema { get; set; }
 
@@ -59,16 +55,14 @@ namespace Air.Mapper.Internal
             Schema = new Schema(SourceType, DestinationType, MapOptions);
         }
 
-        private List<SourceNode> GetDestinationNodeSources(DestinationNode destinationNode)
+        private IEnumerable<SourceNode> GetDestinationNodeSources(DestinationNode destinationNode)
         {
             List<SourceNode> returnValue = new List<SourceNode>();
 
-            for (int i = 0; i < destinationNode.Members.Count; i++)
-            {
-                if (destinationNode.Members[i].Map &&
-                    !returnValue.Exists(node => node.Name == destinationNode.Members[i].SourceNode.Name))
-                    returnValue.Add(destinationNode.Members[i].SourceNode);
-            }
+            foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
+                if (destinationNodeMember.Map &&
+                    !returnValue.Exists(node => node.Name == destinationNodeMember.SourceNode.Name))
+                    returnValue.Add(destinationNodeMember.SourceNode);
 
             for (int i = 0; i < returnValue.Count; i++)
             {
@@ -86,13 +80,13 @@ namespace Air.Mapper.Internal
             return returnValue;
         }
 
-        private List<DestinationNode> GetDistinctNodes(List<DestinationNode> destinationNodes)
+        private IEnumerable<DestinationNode> GetDistinctNodes(IEnumerable<DestinationNode> destinationNodes)
         {
             List<DestinationNode> returnValue = new List<DestinationNode>();
 
-            for (int i = 0; i < destinationNodes.Count; i++)
-                if (!returnValue.Exists(n => n.Name == destinationNodes[i].Name))
-                    returnValue.Add(destinationNodes[i]);
+            foreach (DestinationNode destinationNode in destinationNodes)
+                if (!returnValue.Exists(n => n.Name == destinationNode.Name))
+                    returnValue.Add(destinationNode);
 
             return returnValue;
         }
@@ -123,10 +117,10 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private void DeclareSourceNodesLocals(List<SourceNode> sourceNodes)
+        private void DeclareSourceNodesLocals(IEnumerable<SourceNode> sourceNodes)
         {
-            for (int i = 0; i < sourceNodes.Count; i++)
-                DeclareSourceNodeLocals(sourceNodes[i]);
+            foreach (SourceNode sourceNode in sourceNodes)
+                DeclareSourceNodeLocals(sourceNode);
         }
 
         private void DeclareDestinationNodeLocals(DestinationNode destinationNode)
@@ -151,8 +145,12 @@ namespace Air.Mapper.Internal
             {
                 if (MethodType == MethodType.ActionRef)
                 {
-                    if (destinationNode.NullableUnderlyingType != null)
-                        destinationNode.Local = IL.DeclareLocal(destinationNode.NullableUnderlyingType);
+                    if (destinationNode.NullableUnderlyingType != null ||
+                        destinationNode.IsKeyValuePair)
+                        destinationNode.Local = IL.DeclareLocal(
+                            destinationNode.IsKeyValuePair ?
+                            destinationNode.Type :
+                            destinationNode.NullableUnderlyingType);
                 }
                 else
                 {
@@ -293,7 +291,8 @@ namespace Air.Mapper.Internal
             {
                 if (MethodType == MethodType.ActionRef)
                 {
-                    if (destinationNode.NullableUnderlyingType != null)
+                    if (destinationNode.NullableUnderlyingType != null ||
+                        destinationNode.IsKeyValuePair)
                     {
                         IL.EmitLdloca(destinationNode.Local.LocalIndex);
                     }
@@ -408,26 +407,29 @@ namespace Air.Mapper.Internal
                 Load(destinationNode.ParentNode);
             }
 
-            if (destinationNode.NullableUnderlyingType != null)
+            if (destinationNode.IsKeyValuePair)
             {
-                LoadLocal(destinationNode.Local, false);
-                IL.Emit(OpCodes.Newobj, destinationNode.Type.GetConstructor(new Type[] { destinationNode.NullableUnderlyingType }));
+                LoadLocal(destinationNode.Local, true);
+                IL.Emit(OpCodes.Call, destinationNode.Type.GetMethod(nameof(KeyValue<Type, Type>.ToKeyValuePair)));
             }
             else
             {
                 LoadLocal(destinationNode.Local, false);
             }
 
+            if (destinationNode.NullableUnderlyingType != null)
+                IL.Emit(OpCodes.Newobj, destinationNode.Type.GetConstructor(new Type[] { destinationNode.NullableUnderlyingType }));
+
             IL.EmitSetMemberValue(destinationNode.MemberInfo);
         }
 
-        private void SetDestinationNodes(List<DestinationNode> destinationNodes)
+        private void SetDestinationNodes(IEnumerable<DestinationNode> destinationNodes)
         {
-            List<DestinationNode> nodes = GetDistinctNodes(destinationNodes);
+            List<DestinationNode> nodes = GetDistinctNodes(destinationNodes).ToList();
 
-            for (int i = 0; i < destinationNodes.Count; i++)
+            for (int i = 0; i < nodes.Count; i++)
             {
-                DestinationNode parentNode = destinationNodes[i].ParentNode;
+                DestinationNode parentNode = nodes[i].ParentNode;
                 while (parentNode != null)
                 {
                     if (!nodes.Exists(n => n.Name == parentNode.Name))
@@ -444,7 +446,7 @@ namespace Air.Mapper.Internal
 
         private void SetDestinationNodeMembers(
             DestinationNode destinationNode,
-            List<DestinationNodeMember> destinationNodeMembers)
+            IEnumerable<DestinationNodeMember> destinationNodeMembers)
         {
             if (MethodType == MethodType.ActionRef)
             {
@@ -473,13 +475,10 @@ namespace Air.Mapper.Internal
 
         private void LoadAndSetDestinationNodeMembers(
             DestinationNode destinationNode,
-            List<DestinationNodeMember> destinationNodeMembers)
+            IEnumerable<DestinationNodeMember> destinationNodeMembers)
         {
-            destinationNodeMembers.Sort((l, r) => l.IsCollection.CompareTo(r.IsCollection));
             foreach (DestinationNodeMember destinationNodeMember in destinationNodeMembers)
-            {
                 if (!destinationNodeMember.IsCollection)
-                {
                     IL.EmitLoadAndSetValue(
                         () =>
                         {
@@ -490,680 +489,25 @@ namespace Air.Mapper.Internal
                         },
                         destinationNodeMember.SourceNodeMember,
                         destinationNodeMember.Info);
-                }
-                else
-                {
+
+            foreach (DestinationNodeMember destinationNodeMember in destinationNodeMembers)
+                if (destinationNodeMember.IsCollection)
                     MapCollection(destinationNode, destinationNodeMember);
-                }
-            }
         }
 
         #endregion
-
-        #region Map.Collection
-        private LocalBuilder LoopIndexLocal { get; set; }
-        private LocalBuilder LoopLengthLocal { get; set; }
-        private List<LocalBuilder> LoopSourceLocals { get; set; } = new List<LocalBuilder>();
-        private List<LocalBuilder> LoopDestinationLocals { get; set; } = new List<LocalBuilder>();
-        private Dictionary<(Type, Type), LocalBuilder> LoopMapperMapLocals { get; set; } = new Dictionary<(Type, Type), LocalBuilder>();
-
-        private LocalBuilder GetOrAddLoopIndexLocal()
-        {
-            if (LoopIndexLocal != null)
-                return LoopIndexLocal;
-
-            LoopIndexLocal = IL.DeclareLocal(typeof(int));
-            return LoopIndexLocal;
-        }
-
-        private LocalBuilder GetOrAddLoopLengthLocal()
-        {
-            if (LoopLengthLocal != null)
-                return LoopLengthLocal;
-
-            LoopLengthLocal = IL.DeclareLocal(typeof(int));
-            return LoopLengthLocal;
-        }
-
-        private void test()
-        {
-            var _source = new string[] { };
-
-            var _1 = new HashSet<string>(_source); // ICollection
-            var _2 = new LinkedList<string>(_source); // ICollection
-            var _3 = new List<string>(_source); // ICollection
-            var _4 = new Queue<string>(_source); // IEnumerable
-            var _5 = new SortedSet<string>(_source); // ICollection
-            var _6 = new Stack<string>(_source); // IEnumerable
-            var _7 = new ConcurrentBag<string>(_source); // IProducerConsumerCollection
-            var _8 = new ConcurrentQueue<string>(_source); // IProducerConsumerCollection
-            var _9 = new ConcurrentStack<string>(_source); // IProducerConsumerCollection
-
-            var __source = new Dictionary<string, string>();
-
-            var __1 = new Dictionary<string, string>(__source); // ICollection
-            var __2 = new SortedDictionary<string, string>(__source); // ICollection
-            var __3 = new SortedList<string, string>(__source); // ICollection
-            var __4 = new ConcurrentDictionary<string, string>(__source);  // ICollection
-
-
-            //for (int i = 0; i < _1.Count; i++)
-
-
-        }
-
-        private LocalBuilder GetOrAddLoopSourceLocal(Type sourceType)
-        {
-            LocalBuilder sourceLocal = LoopSourceLocals.FirstOrDefault(l => l.LocalType == sourceType);
-            if (sourceLocal == null)
-            {
-                sourceLocal = IL.DeclareLocal(sourceType);
-                LoopSourceLocals.Add(sourceLocal);
-            }
-
-            return sourceLocal;
-        }
-
-        private LocalBuilder GetOrAddLoopDestinationLocal(Type destinationType)
-        {
-            LocalBuilder destinationLocal = LoopDestinationLocals.FirstOrDefault(l => l.LocalType == destinationType);
-            if (destinationLocal == null)
-            {
-                destinationLocal = IL.DeclareLocal(destinationType);
-                LoopDestinationLocals.Add(destinationLocal);
-            }
-
-            return destinationLocal;
-        }
-
-        private LocalBuilder GetOrAddLoopMapperMapLocal(Type sourceType, Type destinationType)
-        {
-            if (!LoopMapperMapLocals.TryGetValue((sourceType, destinationType), out LocalBuilder mapperLocal))
-            {
-                mapperLocal = IL.DeclareLocal(typeof(Func<,>).MakeGenericType(new[] { sourceType, destinationType }));
-                LoopMapperMapLocals.Add((sourceType, destinationType), mapperLocal);
-            }
-
-            return mapperLocal;
-        }
-
-        private void DeclareCollectionSourceLocals(CollectionInfo collectionInfo)
-        {
-            if (collectionInfo.SourceType.IsArray ||
-               IsAssignableFrom(collectionInfo.SourceType, typeof(IList<>)) ||
-               IsAssignableFrom(collectionInfo.SourceType, typeof(IReadOnlyList<>)))
-            {
-                collectionInfo.SourceLocal = GetOrAddLoopSourceLocal(collectionInfo.SourceType);
-
-                collectionInfo.LoopIndex = GetOrAddLoopIndexLocal();
-                collectionInfo.LoopLength = GetOrAddLoopLengthLocal();
-            }
-            else if (IsAssignableFrom(collectionInfo.SourceType, typeof(ICollection<>)) ||
-                    IsAssignableFrom(collectionInfo.SourceType, typeof(IProducerConsumerCollection<>)))
-            {
-                collectionInfo.SourceLocal = GetOrAddLoopSourceLocal(collectionInfo.SourceArgument.MakeArrayType());
-
-                collectionInfo.LoopIndex = GetOrAddLoopIndexLocal();
-                collectionInfo.LoopLength = GetOrAddLoopLengthLocal();
-            }
-            else
-            {
-                collectionInfo.SourceLocal = GetOrAddLoopSourceLocal(collectionInfo.SourceType);
-            }
-        }
-
-        private void DeclareCollectionDestinationLocals(CollectionInfo collectionInfo)
-        {
-            Type destinationType = collectionInfo.DestinationType;
-
-            if (collectionInfo.DestinationType.IsInterface)
-            {
-                if (destinationType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-                {
-                    if (collectionInfo.LoopLength != null)
-                        collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(GetIEnumerableArgument(destinationType).MakeArrayType());
-                    else
-                        collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(typeof(List<>).MakeGenericType(new[] { GetIEnumerableArgument(destinationType) }));
-                }
-                else
-                {
-                    collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(
-                        MaintainableGenericCollections.First(t => t.Type == destinationType.GetGenericTypeDefinition()).LocalType);
-                }
-
-                return;
-            }
-
-            if (destinationType.IsArray)
-            {
-                if (collectionInfo.LoopLength != null)
-                    collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(destinationType);
-                else
-                    collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(typeof(List<>).MakeGenericType(new[] { GetIEnumerableArgument(destinationType) }));
-            }
-            else
-            {
-                collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(destinationType);
-            }
-        }
-
-        private void DeclareCollectionMapperMapLocal(CollectionInfo collectionInfo) =>
-            collectionInfo.MapperMapMethodLocal = GetOrAddLoopMapperMapLocal(collectionInfo.SourceArgument, collectionInfo.DestinationArgument);
-
-        private void DeclareCollectionLocals(DestinationNode destinationNode)
-        {
-            foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
-            {
-                if (destinationNodeMember.Map &&
-                    destinationNodeMember.IsCollection)
-                {
-                    CollectionInfo collectionInfo = new CollectionInfo(destinationNode, destinationNodeMember);
-                    DeclareCollectionSourceLocals(collectionInfo);
-                    DeclareCollectionDestinationLocals(collectionInfo);
-                    DeclareCollectionMapperMapLocal(collectionInfo);
-                }
-            }
-        }
-
-        private void SetCollectionSourceLocals(CollectionInfo collectionInfo)
-        {
-            if (collectionInfo.SourceType.IsArray ||
-                IsAssignableFrom(collectionInfo.SourceType, typeof(IList<>)) ||
-                IsAssignableFrom(collectionInfo.SourceType, typeof(IReadOnlyList<>)))
-            {
-                collectionInfo.SourceLocal = GetOrAddLoopSourceLocal(collectionInfo.SourceType);
-
-                collectionInfo.LoopIndex = GetOrAddLoopIndexLocal();
-                collectionInfo.LoopLength = GetOrAddLoopLengthLocal();
-
-                IL.EmitLdc_I4(0);
-                IL.EmitStoreLocal(collectionInfo.LoopIndex);
-
-                Load(
-                    collectionInfo.DestinationNodeMember.SourceNode,
-                    collectionInfo.DestinationNodeMember.SourceNodeMember);
-                IL.EmitStoreLocal(collectionInfo.SourceLocal);
-
-                IL.EmitLoadLocal(collectionInfo.SourceLocal, false);
-                if (collectionInfo.SourceType.IsArray)
-                {
-                    if (collectionInfo.SourceType.GetArrayRank() == 1)
-                    {
-                        IL.Emit(OpCodes.Ldlen);
-                        IL.Emit(OpCodes.Conv_I4);
-                    }
-                    else
-                    {
-                        IL.Emit(OpCodes.Callvirt, collectionInfo.SourceType.GetProperty(nameof(Array.Length)).GetGetMethod());
-                    }
-                }
-                else
-                {
-                    IL.Emit(OpCodes.Callvirt, collectionInfo.SourceType.GetProperty(nameof(ICollection<Type>.Count)).GetGetMethod());
-                }
-
-                IL.EmitStoreLocal(collectionInfo.LoopLength);
-            }
-            else if (IsAssignableFrom(collectionInfo.SourceType, typeof(ICollection<>)) ||
-                    IsAssignableFrom(collectionInfo.SourceType, typeof(IProducerConsumerCollection<>)))
-            {
-                collectionInfo.SourceLocal = GetOrAddLoopSourceLocal(collectionInfo.SourceArgument.MakeArrayType());
-
-                collectionInfo.LoopIndex = GetOrAddLoopIndexLocal();
-                collectionInfo.LoopLength = GetOrAddLoopLengthLocal();
-
-                IL.EmitLdc_I4(0);
-                IL.EmitStoreLocal(collectionInfo.LoopIndex);
-
-                IL.EmitLoadLocal(collectionInfo.SourceLocal, false);
-                IL.Emit(OpCodes.Callvirt, collectionInfo.SourceType.GetProperty(nameof(ICollection.Count)).GetGetMethod());
-                IL.EmitStoreLocal(collectionInfo.LoopLength);
-
-                IL.EmitLoadLocal(collectionInfo.LoopLength, false);
-                IL.Emit(OpCodes.Newarr, collectionInfo.SourceLocal.LocalType);
-                IL.EmitStoreLocal(collectionInfo.SourceLocal);
-
-                Load(
-                    collectionInfo.DestinationNodeMember.SourceNode,
-                    collectionInfo.DestinationNodeMember.SourceNodeMember);
-                IL.EmitLdc_I4(0);
-
-                if (IsAssignableFrom(collectionInfo.SourceType, typeof(ICollection<>)))
-                    IL.Emit(OpCodes.Callvirt,
-                        typeof(ICollection<>)
-                        .MakeGenericType(new[] { collectionInfo.SourceArgument })
-                        .GetMethods()
-                        .First(m => m.Name == nameof(ICollection<Type>.CopyTo) && m.GetParameters().Length == 2));
-                else
-                    IL.Emit(OpCodes.Callvirt,
-                        typeof(IProducerConsumerCollection<>)
-                        .MakeGenericType(new[] { collectionInfo.SourceArgument })
-                        .GetMethods()
-                        .First(m => m.Name == nameof(IProducerConsumerCollection<Type>.CopyTo) && m.GetParameters().Length == 2));
-
-                IL.EmitLoadLocal(collectionInfo.SourceLocal, false);
-                IL.Emit(OpCodes.Ldlen);
-                IL.EmitStoreLocal(collectionInfo.LoopLength);
-            }
-            else
-            {
-                collectionInfo.SourceLocal = GetOrAddLoopSourceLocal(collectionInfo.SourceType);
-                Load(
-                    collectionInfo.DestinationNodeMember.SourceNode,
-                    collectionInfo.DestinationNodeMember.SourceNodeMember);
-                IL.EmitStoreLocal(collectionInfo.SourceLocal);
-            }
-        }
-
-        private void SetCollectionDestinationLocals(CollectionInfo collectionInfo)
-        {
-            Type destinationType = collectionInfo.DestinationType;
-
-            if (destinationType.IsInterface)
-            {
-                if (destinationType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-                {
-                    if (collectionInfo.LoopLength != null)
-                    {
-                        collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(GetIEnumerableArgument(destinationType).MakeArrayType());
-                        IL.EmitLoadLocal(collectionInfo.LoopLength, false);
-                        IL.Emit(OpCodes.Newarr, typeof(int));
-                    }
-                    else
-                    {
-                        collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(typeof(List<>).MakeGenericType(new[] { GetIEnumerableArgument(destinationType) }));
-                        IL.Emit(OpCodes.Newobj, collectionInfo.DestinationLocal);
-                    }
-                }
-                else
-                {
-                    collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(
-                        MaintainableGenericCollections.First(t => t.Type == destinationType.GetGenericTypeDefinition()).LocalType);
-
-                    IL.Emit(OpCodes.Newobj, collectionInfo.DestinationLocal);
-                }
-
-                IL.EmitStoreLocal(collectionInfo.DestinationLocal);
-
-                return;
-            }
-
-
-            if (destinationType.IsArray)
-            {
-                if (collectionInfo.LoopLength != null)
-                {
-                    collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(destinationType);
-                    IL.EmitLoadLocal(collectionInfo.LoopLength, false);
-                    IL.Emit(OpCodes.Newarr, typeof(int));
-                }
-                else
-                {
-                    collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(typeof(List<>).MakeGenericType(new[] { GetIEnumerableArgument(destinationType) }));
-                    IL.Emit(OpCodes.Newobj, collectionInfo.DestinationLocal);
-                }
-
-                IL.EmitStoreLocal(collectionInfo.DestinationLocal);
-            }
-            else if (destinationType.GetInterfaces().Where(ci => ci.IsGenericType).Select(ci => ci.GetGenericTypeDefinition())
-                    .Intersect(MaintainableGenericCollections.Select(s => s.Type))
-                    .Any())
-            {
-                collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(destinationType);
-
-                if (collectionInfo.LoopLength != null && destinationType.GetConstructor(new[] { typeof(int) }) != null)
-                {
-                    IL.EmitLoadLocal(collectionInfo.LoopLength, false);
-                    IL.Emit(OpCodes.Newobj, destinationType.GetConstructor(new[] { typeof(int) }));
-                }
-                else
-                {
-                    IL.Emit(OpCodes.Newobj, destinationType.GetConstructor(Type.EmptyTypes));
-                }
-
-                IL.EmitStoreLocal(collectionInfo.DestinationLocal);
-            }
-            else
-            {
-                collectionInfo.DestinationLocal = GetOrAddLoopDestinationLocal(destinationType);
-            }
-        }
-
-        private void SetCollectionMapperMapLocal(CollectionInfo collectionInfo)
-        {
-            collectionInfo.MapperMapMethodLocal = GetOrAddLoopMapperMapLocal(collectionInfo.SourceArgument, collectionInfo.DestinationArgument);
-
-            MethodInfo compiledMapperMethod = typeof(Mapper<,>)
-                .MakeGenericType(new[] { collectionInfo.SourceArgument, collectionInfo.DestinationArgument })
-                .GetProperty(nameof(Mapper<Type, Type>.CompiledFunc))
-                .GetGetMethod();
-
-            IL.Emit(OpCodes.Call, compiledMapperMethod);
-            IL.EmitStoreLocal(collectionInfo.MapperMapMethodLocal);
-        }
-
-        private void SetCollectionLocals(CollectionInfo collectionInfo)
-        {
-            SetCollectionSourceLocals(collectionInfo);
-            SetCollectionDestinationLocals(collectionInfo);
-            SetCollectionMapperMapLocal(collectionInfo);
-        }
-
-        private void MapCollectionLoopForEach(CollectionInfo collectionInfo)
-        {
-
-        }
-
-        private void MapCollectionLoopIndex(CollectionInfo collectionInfo)
-        {
-            Label loopCompareIndex = IL.DefineLabel();
-            Label loopBody = IL.DefineLabel();
-
-            IL.Emit(OpCodes.Br_S, loopCompareIndex);
-
-            IL.MarkLabel(loopBody);
-
-            IL.EmitLoadLocal(collectionInfo.DestinationLocal, false);
-            IL.EmitLoadLocal(collectionInfo.MapperMapMethodLocal, false);
-
-            IL.EmitLoadLocal(collectionInfo.SourceLocal, false);
-            IL.EmitLoadLocal(collectionInfo.LoopIndex, false);
-
-
-            if (collectionInfo.SourceLocal.LocalType.IsArray)
-                IL.Emit(OpCodes.Ldelem_I4);
-            else
-                IL.Emit(OpCodes.Callvirt, collectionInfo.SourceLocal.LocalType.GetProperties().First(p => p.GetIndexParameters().Length > 0).GetGetMethod());
-
-            IL.Emit(OpCodes.Callvirt, typeof(Func<,>).MakeGenericType(new[] { collectionInfo.SourceArgument, collectionInfo.DestinationArgument }).GetMethod(nameof(Func<Type>.Invoke)));
-
-            if (collectionInfo.DestinationLocal.LocalType.IsArray)
-                IL.Emit(OpCodes.Stelem_Ref);
-            else
-                IL.Emit(OpCodes.Callvirt, collectionInfo.DestinationLocal.LocalType.GetMethods().First(m => m.Name == nameof(IList.Add) && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == collectionInfo.DestinationArgument));
-
-            IL.EmitLoadLocal(collectionInfo.LoopIndex, false);
-            IL.EmitLdc_I4(1);
-            IL.Emit(OpCodes.Add);
-            IL.EmitStoreLocal(collectionInfo.LoopIndex);
-
-            IL.MarkLabel(loopCompareIndex);
-
-            IL.EmitLoadLocal(collectionInfo.LoopIndex, false);
-            IL.EmitLoadLocal(collectionInfo.LoopLength, false);
-
-            IL.Emit(OpCodes.Blt_S, loopBody);
-
-            if (!collectionInfo.DestinationNodeMember.Info.IsStatic)
-                Load(collectionInfo.DestinationNode);
-
-            IL.EmitLoadLocal(collectionInfo.DestinationLocal, false);
-            IL.EmitSetMemberValue(collectionInfo.DestinationNodeMember.Info);
-        }
-
-
-        private void MapCollection(
-           DestinationNode destinationNode,
-           DestinationNodeMember destinationNodeMember)
-        {
-            CollectionInfo collectionInfo = new CollectionInfo(destinationNode, destinationNodeMember);
-
-            Load(
-                collectionInfo.DestinationNodeMember.SourceNode,
-                collectionInfo.DestinationNodeMember.SourceNodeMember);
-
-            IL.EmitBrfalse_s(
-                () =>
-                {
-                    SetCollectionLocals(collectionInfo);
-
-                    if (collectionInfo.LoopLength != null)
-                        MapCollectionLoopIndex(collectionInfo);
-                    else
-                        MapCollectionLoopForEach(collectionInfo);
-                });
-        }
-
-        //private void MapFromArray(CollectionInfo collectionInfo)
-        //{
-        //    SetCollectionLocals(collectionInfo);
-
-        //    GetOrAddLoopMapperMapLocal(
-        //        collectionInfo.SourceArgument,
-        //        collectionInfo.DestinationArgument,
-        //        out LocalBuilder mapperLocal,
-        //        out MethodInfo compiledMapperMethod);
-
-        //    IL.Emit(OpCodes.Call, compiledMapperMethod);
-        //    IL.EmitStoreLocal(mapperLocal);
-
-        //    LocalBuilder loopIndex = GetOrAddLoopIndexLocal();
-        //    LocalBuilder loopLength = GetOrAddLoopLengthLocal();
-
-        //    Load(
-        //        collectionInfo.DestinationNodeMember.SourceNode,
-        //        collectionInfo.DestinationNodeMember.SourceNodeMember);
-
-        //    IL.EmitBrfalse_s(
-        //        () =>
-        //        {
-        //            Load(
-        //                collectionInfo.DestinationNodeMember.SourceNode,
-        //                collectionInfo.DestinationNodeMember.SourceNodeMember);
-        //            IL.EmitStoreLocal(collectionInfo.SourceLocal);
-
-        //            IL.EmitLdc_I4(0);
-        //            IL.EmitStoreLocal(loopIndex);
-
-        //            IL.EmitLoadLocal(collectionInfo.SourceLocal, false);
-        //            IL.Emit(OpCodes.Ldlen);
-        //            IL.Emit(OpCodes.Conv_I4);
-
-        //            IL.EmitStoreLocal(loopLength);
-        //            IL.EmitLoadLocal(loopLength, false);
-
-        //            IL.Emit(OpCodes.Newarr, typeof(int));
-
-        //            IL.EmitStoreLocal(collectionInfo.DestinationLocal);
-
-        //            Label loopCompareIndex = IL.DefineLabel();
-        //            Label loopBody = IL.DefineLabel();
-
-        //            IL.Emit(OpCodes.Br_S, loopCompareIndex);
-
-        //            IL.MarkLabel(loopBody);
-
-        //            IL.EmitLoadLocal(collectionInfo.DestinationLocal, false);
-        //            IL.EmitLoadLocal(mapperLocal, false);
-
-        //            IL.EmitLoadLocal(collectionInfo.SourceLocal, false);
-        //            IL.EmitLoadLocal(loopIndex, false);
-
-        //            IL.Emit(OpCodes.Ldelem_I4);
-
-        //            IL.Emit(OpCodes.Callvirt, typeof(Func<,>).MakeGenericType(new[] { collectionInfo.SourceArgument, collectionInfo.DestinationArgument }).GetMethod(nameof(Func<Type>.Invoke)));
-
-        //            // todo review
-        //            if (collectionInfo.DestinationType.IsArray)
-        //                IL.Emit(OpCodes.Stelem_Ref);
-        //            //else
-        //            //    IL.Emit(OpCodes.Callvirt, destinationAddItem);
-
-        //            IL.EmitLoadLocal(loopIndex, false);
-        //            IL.EmitLdc_I4(1);
-        //            IL.Emit(OpCodes.Add);
-        //            IL.EmitStoreLocal(loopIndex);
-
-        //            IL.MarkLabel(loopCompareIndex);
-
-        //            IL.EmitLoadLocal(loopIndex, false);
-        //            IL.EmitLoadLocal(loopLength, false);
-
-        //            IL.Emit(OpCodes.Blt_S, loopBody);
-
-        //            if (!collectionInfo.DestinationNodeMember.Info.IsStatic)
-        //                Load(collectionInfo.DestinationNode);
-
-        //            IL.EmitLoadLocal(collectionInfo.DestinationLocal, false);
-        //            IL.EmitSetMemberValue(collectionInfo.DestinationNodeMember.Info);
-        //        });
-        //}
-
-
-
-        #endregion
-
-
-
-        #region todo removed
-
-        //private string GetMapperToCollectionMethodName(Type collectionType) =>
-        //    collectionType.IsArray ? ToArray : $"{To}{collectionType.GetGenericTypeDefinition().Name.Split('`')[0]}";
-
-        //private void ConvertToCollection(Type collectionType)
-        //{
-        //    IL.Emit(OpCodes.Dup);
-        //    IL.EmitBrfalse_s(() => IL.Emit(OpCodes.Newobj, GetGenericIEnumerableParameterTypeConstructor(collectionType)));
-        //}
-
-        //private MethodInfo GetMapperToKeyValuePairCollectionTypeMethod(
-        //    DestinationNodeMember destinationNodeMember,
-        //    Type sourceElementType,
-        //    Type destinationElementType)
-        //{
-        //    Type destinationType = destinationNodeMember.Info.Type;
-
-        //    MethodInfo[] methods = GetGenericIEnumerableParameterTypeMethods(
-        //        MakeGenericMapper(sourceElementType.GenericTypeArguments[1], destinationElementType.GenericTypeArguments[1]),
-        //        ToKeyValuePairCollectionArgumentPredicate);
-
-        //    MethodInfo methodInfo = methods.FirstOrDefault(m =>
-        //            m.Name == GetMapperToCollectionMethodName(destinationType) &&
-        //            m.IsGenericMethod &&
-        //            m.ReturnType.IsGenericType &&
-        //            m.ReturnType.GetGenericTypeDefinition() == destinationType.GetGenericTypeDefinition()) ??
-        //        methods.Single(m =>
-        //            m.Name == ToArray &&
-        //            m.IsGenericMethod &&
-        //            m.ReturnType.IsArray);
-
-        //    return methodInfo.MakeGenericMethod(new[]
-        //    {
-        //        sourceElementType.GenericTypeArguments[0],
-        //        destinationElementType.GenericTypeArguments[0]
-        //    });
-        //}
-
-        //private MethodInfo GetMapperToCollectionTypeMethod(
-        //    DestinationNodeMember destinationNodeMember,
-        //    Type sourceElementType,
-        //    Type destinationElementType)
-        //{
-        //    Type sourceType = destinationNodeMember.SourceNodeMember.Type;
-        //    Type destinationType = destinationNodeMember.Info.Type;
-
-        //    MethodInfo[] methods = MakeGenericMapper(sourceElementType, destinationElementType)
-        //       .GetMethods(BindingFlags.Public | BindingFlags.Static);
-
-        //    MethodInfo methodInfo =
-        //        methods.FirstOrDefault(m =>
-        //            m.Name == GetMapperToCollectionMethodName(destinationType) &&
-        //            !m.IsGenericMethod &&
-        //            m.ReturnType == destinationType &&
-        //            m.GetParameters().Length == 1 &&
-        //            m.GetParameters()[0].ParameterType == sourceType) ??
-        //        methods.FirstOrDefault(m =>
-        //            m.Name == GetMapperToCollectionMethodName(destinationType) &&
-        //            !m.IsGenericMethod &&
-        //            m.ReturnType == destinationType &&
-        //            m.GetParameters().Length == 1 &&
-        //            m.GetParameters()[0].ParameterType == MakeGenericIEnumerableType(sourceElementType));
-
-        //    if (methodInfo != null)
-        //        return methodInfo;
-
-        //    methodInfo = methods.FirstOrDefault(m =>
-        //            m.Name == ToArray &&
-        //            !m.IsGenericMethod &&
-        //            m.ReturnType == destinationElementType.MakeArrayType() &&
-        //            m.GetParameters().Length == 1 &&
-        //            m.GetParameters()[0].ParameterType == sourceType) ??
-        //        methods.Single(m =>
-        //            m.Name == ToArray &&
-        //            !m.IsGenericMethod &&
-        //            m.ReturnType == destinationElementType.MakeArrayType() &&
-        //            m.GetParameters().Length == 1 &&
-        //            m.GetParameters()[0].ParameterType == MakeGenericIEnumerableType(sourceElementType));
-
-        //    return methodInfo;
-        //}
-
-        //private MethodInfo GetMapperToCollectionMethod(DestinationNodeMember destinationNodeMember)
-        //{
-        //    Type sourceElementType = GetGenericIEnumerableElementType(destinationNodeMember.SourceNodeMember.Type);
-        //    Type destinationElementType = GetGenericIEnumerableElementType(destinationNodeMember.Info.Type);
-
-        //    if (sourceElementType.IsGenericType && sourceElementType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
-        //        return GetMapperToKeyValuePairCollectionTypeMethod(destinationNodeMember, sourceElementType, destinationElementType);
-        //    else
-        //        return GetMapperToCollectionTypeMethod(destinationNodeMember, sourceElementType, destinationElementType);
-        //}
-
-        //private void MapperToCollection(
-        //   DestinationNode destinationNode,
-        //   DestinationNodeMember destinationNodeMember)
-        //{
-        //    if (MethodType == MethodType.ActionRef)
-        //        return;
-
-        //    MethodInfo mapperToCollection = GetMapperToCollectionMethod(destinationNodeMember);
-
-        //    if (!destinationNodeMember.Info.IsStatic)
-        //        Load(destinationNode);
-
-        //    Load(destinationNodeMember.SourceNode, destinationNodeMember.SourceNodeMember);
-        //    IL.Emit(OpCodes.Call, mapperToCollection);
-
-        //    if (mapperToCollection.ReturnType != destinationNodeMember.Info.Type)
-        //        ConvertToCollection(destinationNodeMember.Info.Type);
-
-        //    IL.EmitSetMemberValue(destinationNodeMember.Info);
-        //}
-
-        //private void DupMapperToCollection(DestinationNodeMember destinationNodeMember)
-        //{
-        //    if (MethodType == MethodType.ActionRef)
-        //        return;
-
-        //    IL.Emit(OpCodes.Dup);
-        //    Load(destinationNodeMember.SourceNode, destinationNodeMember.SourceNodeMember);
-        //    MethodInfo mapperToCollection = GetMapperToCollectionMethod(destinationNodeMember);
-        //    IL.Emit(OpCodes.Call, mapperToCollection);
-
-        //    if (mapperToCollection.ReturnType != destinationNodeMember.Info.Type)
-        //        ConvertToCollection(destinationNodeMember.Info.Type);
-
-        //    IL.EmitSetMemberValue(destinationNodeMember.Info);
-        //}
-
-
-
-        #endregion
-
-
-
 
         private protected bool MapsNodeMembers(SourceNode sourceNode)
         {
             if (!sourceNode.Load)
                 return false;
 
-            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, 1, n => n.Load);
+            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 1).ToList();
 
-            return Schema.DestinationNodes.Exists(n =>
+            return Schema.DestinationNodes.Any(n =>
                 n.Load &&
                 n.MembersMapCount != 0 &&
-                n.Members.Exists(m => m.Map && m.SourceNode.Name == sourceNode.Name));
+                n.Members.Any(m => m.Map && m.SourceNode.Name == sourceNode.Name));
         }
 
         private protected bool MapsNodesMembers(SourceNode sourceNode)
@@ -1171,11 +515,11 @@ namespace Air.Mapper.Internal
             if (!sourceNode.Load)
                 return false;
 
-            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, 0, n => n.Load);
+            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 0).ToList();
 
-            return Schema.DestinationNodes.Exists(n =>
+            return Schema.DestinationNodes.Any(n =>
                 n.Load &&
-                n.MembersMapCount != 0 && n.Members.Exists(m => m.Map &&
+                n.MembersMapCount != 0 && n.Members.Any(m => m.Map &&
                     (
                         m.SourceNode.Name == sourceNode.Name ||
                         childNodes.Exists(c => c.Name == m.SourceNode.Name)
@@ -1185,12 +529,12 @@ namespace Air.Mapper.Internal
 
         private protected bool StructRequired(SourceNode sourceNode)
         {
-            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, 1, (n) => n.Load);
+            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, (n) => n.Load, 1).ToList();
 
             return childNodes.Exists(n => !n.IsStatic) ||
-                Schema.DestinationNodes.Exists(n =>
+                Schema.DestinationNodes.Any(n =>
                     n.Load &&
-                    n.MembersMapCount != 0 && n.Members.Exists(m =>
+                    n.MembersMapCount != 0 && n.Members.Any(m =>
                         m.Map &&
                         m.SourceNode.Name == sourceNode.Name &&
                         !m.SourceNodeMember.IsStatic));
@@ -1199,7 +543,7 @@ namespace Air.Mapper.Internal
         private void MapDestinationNodeMembers(
             SourceNode sourceNode,
             DestinationNode destinationNode,
-            List<DestinationNodeMember> destinationNodeMembers)
+            IEnumerable<DestinationNodeMember> destinationNodeMembers)
         {
             EnsureDestinationNodePath(destinationNode, sourceNode);
             SetDestinationNodeMembers(destinationNode, destinationNodeMembers);
@@ -1252,9 +596,9 @@ namespace Air.Mapper.Internal
 
         private void MapSourceChildNodes(SourceNode sourceNode)
         {
-            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, 1, n => n.Load);
-            for (int s = 0; s < childNodes.Count; s++)
-                MapSourceNodes(childNodes[s]);
+            IEnumerable<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 1);
+            foreach (SourceNode childNode in childNodes)
+                MapSourceNodes(childNode);
         }
 
         private void MapSourceNode(SourceNode sourceNode)
@@ -1269,7 +613,7 @@ namespace Air.Mapper.Internal
                         m.SourceNode != null &&
                         m.SourceNode.Name == sourceNode.Name &&
                         m.Map &&
-                        m.Status == Status.Successful);
+                        m.Status == Status.Successful).ToList();
 
                     if (members.Count != 0)
                     {
@@ -1282,7 +626,7 @@ namespace Air.Mapper.Internal
             SetDestinationNodes(destinationNodes);
         }
 
-        private void Init(DestinationNode destinationNode)
+        private protected void Init(DestinationNode destinationNode)
         {
             if (destinationNode.Depth != 0)
             {
@@ -1299,6 +643,8 @@ namespace Air.Mapper.Internal
                     IL.EmitInit(destinationNode.Type);
                     IL.EmitSetMemberValue(destinationNode.MemberInfo);
                 }
+
+                destinationNode.Loaded = true;
 
                 return;
             }
@@ -1342,9 +688,11 @@ namespace Air.Mapper.Internal
                     IL.EmitStloc(destinationNode.Local.LocalIndex);
                 }
             }
+
+            destinationNode.Loaded = true;
         }
 
-        private void InitIfNull(DestinationNode destinationNode)
+        private protected void InitIfNull(DestinationNode destinationNode)
         {
             if (destinationNode.Depth != 0)
             {
@@ -1361,6 +709,8 @@ namespace Air.Mapper.Internal
                     IL.EmitBrtrue_s(() => Init(destinationNode));
                 }
 
+                destinationNode.Loaded = true;
+
                 return;
             }
 
@@ -1376,6 +726,8 @@ namespace Air.Mapper.Internal
                 Load(destinationNode);
                 IL.EmitBrtrue_s(() => Init(destinationNode));
             }
+
+            destinationNode.Loaded = true;
         }
 
         /// <summary>
@@ -1385,7 +737,7 @@ namespace Air.Mapper.Internal
         /// <param name="destinationNodeMembers"></param>
         private void InitAndSetDestinationNodeMembers(
             DestinationNode destinationNode,
-            List<DestinationNodeMember> destinationNodeMembers)
+            IEnumerable<DestinationNodeMember> destinationNodeMembers)
         {
             if (destinationNode.Depth == 0 && MethodType == MethodType.ActionRef)
             {
@@ -1404,7 +756,6 @@ namespace Air.Mapper.Internal
             IL.EmitInit(destinationNode.Type);
             destinationNode.Loaded = true;
 
-            destinationNodeMembers.Sort((l, r) => l.IsCollection.CompareTo(r.IsCollection));
             foreach (DestinationNodeMember destinationNodeMember in destinationNodeMembers)
             {
                 if (destinationNodeMember.Info.IsStatic)
@@ -1457,7 +808,6 @@ namespace Air.Mapper.Internal
                 bool loaded = destinationNodes[n].Loaded;
 
                 sourceNode.DestinationNodes.Add(destinationNodes[n]);
-                destinationNodes[n].Loaded = true;
 
                 if (loaded)
                     continue;
@@ -1508,6 +858,8 @@ namespace Air.Mapper.Internal
             {
                 InitIfNull(destinationNode);
             }
+
+            destinationNode.Loaded = true;
         }
     }
 }

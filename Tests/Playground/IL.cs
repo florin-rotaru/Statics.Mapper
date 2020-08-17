@@ -2,7 +2,6 @@
 using AutoFixture;
 using Models;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -74,32 +73,6 @@ namespace Playground
                 runs += 1;
                 actions *= 10;
             }
-        }
-
-
-        public void IDictionaryCollection()
-        {
-            var source = new Dictionary<string, string>(); 
-            var _0 = new Dictionary<string, string>(source); // ICollection
-            var _1 = new SortedDictionary<string, string>(source); // ICollection
-            var _2 = new SortedList<string, string>(source); // ICollection
-            var _9 = new ConcurrentDictionary<string, string>(source);  // ICollection
-        }
-
-        public void IListCollection()
-        {
-            var source = new string[] { };
-
-            var _1 = new HashSet<string>(source); // ICollection
-            var _2 = new LinkedList<string>(source); // ICollection
-            //var _3 = new LinkedListNode<List<string>>(source);
-            var _4 = new List<string>(source); // ICollection
-            var _5 = new Queue<string>(source); // IEnumerable
-            var _6 = new SortedSet<string>(source); // ICollection
-            var _7 = new Stack<string>(source); // IEnumerable
-            var _8 = new ConcurrentBag<string>(source); // IProducerConsumerCollection
-            var _9 = new ConcurrentQueue<string>(source); // IProducerConsumerCollection
-            var _10 = new ConcurrentStack<string>(source); // IProducerConsumerCollection
         }
 
         [Fact]
@@ -192,26 +165,6 @@ namespace Playground
             il = Mapper<TC1SS0_I0_Members, TC1C0_I0_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N0.StringMember", "N0.StringMember"));
         }
 
-
-
-        [Fact]
-        public void MC0_I0_Members()
-        {
-            var source = Fixture.Create<TMC0_I0_Members>();
-            var mapFunc = Mapper<TMC0_I0_Members, TMC0_I0_Members>.CompileFunc(o => o
-                .Ignore(i => i)
-                .Map(s => s.M0, d => d.M0)
-                .Map(s => s.M0.StringMember, d => d.M1.StringMember));
-
-            var il = Mapper<TMC0_I0_Members, TMC0_I0_Members>.ViewFuncIL(o => o
-                .Ignore(i => i)
-                .Map(s => s.M0, d => d.M0)
-                .Map(s => s.M0.StringMember, d => d.M1.StringMember));
-
-            var destination = mapFunc(source);
-        }
-
-
         [Fact]
         public void Collection()
         {
@@ -225,7 +178,7 @@ namespace Playground
             var mapActionRef = Mapper<TClassArrayClassMembers, TStructListNullableStructMembers>.CompileActionRef();
             mapActionRef(source, ref destination);
             Assert.True(CompareEquals(source, destination));
-
         }
+
     }
 }

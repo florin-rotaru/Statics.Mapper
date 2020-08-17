@@ -4,6 +4,7 @@ using Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using Xunit;
 using Xunit.Abstractions;
 using static Air.Compare.Members;
@@ -26,6 +27,15 @@ namespace Playground
 
             var customization = new SupportMutableValueTypesCustomization();
             customization.Customize(Fixture);
+        }
+
+        [Fact]
+        public void Defaults()
+        {
+            var source = Fixture.Create<TC1C0_I0_Members>();
+
+            var destination = Mapper<TC1C0_I0_Members, TC1C0_I0_Members>.Map(source);
+
         }
 
 

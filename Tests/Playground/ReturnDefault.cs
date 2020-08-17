@@ -60,7 +60,6 @@ namespace Playground
             Assert.Null(destination);
         }
 
-
         [Fact]
         public void From_C1C0_I0_Members_To_C1C0_I0_Members()
         {

@@ -10,7 +10,7 @@ namespace Air.Mapper
     {
         private List<IMapOption> Options { get; } = new List<IMapOption>();
 
-        public List<IMapOption> Get() { return Options; }
+        public IEnumerable<IMapOption> Get() { return Options; }
 
         public MapOptions<S, D> Ignore(Expression<Func<D, object>> destination)
         {
@@ -24,16 +24,21 @@ namespace Air.Mapper
             return this;
         }
 
-        public MapOptions<S, D> Map(Expression<Func<S, object>> source, Expression<Func<D, object>> destination, bool inline = true, bool expand = true)
+        public MapOptions<S, D> Map(
+            string source,
+            string destination,
+            bool expand = true,
+            bool useMapperConfig = true)
         {
-            Options.Add(new Option(nameof(Map), new object[] { TypeInfo.GetName(source, true), TypeInfo.GetName(destination, true), inline, expand }));
+            Options.Add(new Option(nameof(Map), new object[] { source, destination, expand, useMapperConfig }));
             return this;
         }
 
-        public MapOptions<S, D> Map(string source, string destination, bool expand = true)
-        {
-            Options.Add(new Option(nameof(Map), new object[] { source, destination, expand }));
-            return this;
-        }
+        public MapOptions<S, D> Map(
+            Expression<Func<S, object>> source,
+            Expression<Func<D, object>> destination,
+            bool expand = true,
+            bool useMapperConfig = true) =>
+            Map(TypeInfo.GetName(source, true), TypeInfo.GetName(destination, true), expand, useMapperConfig);
     }
 }

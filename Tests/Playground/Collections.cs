@@ -1,6 +1,8 @@
 ﻿using Air.Mapper;
+using Air.Mapper.Internal;
 using AutoFixture;
 using Models;
+using System.Collections.Generic;
 using Xunit;
 using static Air.Compare.Members;
 
@@ -13,16 +15,6 @@ namespace Playground
         public Collections()
         {
             Fixture = new Fixture();
-        }
-
-        [Fact]
-        public void Example()
-        {
-            var source = new TDictionary<TC0_I0_Members>();
-            Mapper<TC0_I0_Members, TC0_I0_Members>.ToDictionary<int, long>(source);
-
-            var destination = new TDictionary<TC0_I0_Members>(source ?? null);
-
         }
 
         [Fact]
@@ -54,11 +46,15 @@ namespace Playground
         [Fact]
         public void C1_I11_Dictionary_To_C1_I11_Dictionary()
         {
+            //var il = Mapper<KeyValuePair<int, int>, KeyValuePair<int, int>>.ViewActionRefIL();
+            var il = Mapper<TC1_I11_Dictionary_Members, TC1_I11_Dictionary_Members>.ViewActionRefIL();
+
             var source = Mapper<TC1_I11_Dictionary_Members, TC1_I11_Dictionary_Members>.Map(Fixture.Create<TC1_I11_Dictionary_Members>());
             var mapFunc = Mapper<TC1_I11_Dictionary_Members, TC1_I11_Dictionary_Members>.CompileFunc();
             var destination = mapFunc(source);
             Assert.True(CompareEquals(source, destination));
 
+            destination = new TC1_I11_Dictionary_Members();
             var mapAction = Mapper<TC1_I11_Dictionary_Members, TC1_I11_Dictionary_Members>.CompileActionRef();
             mapAction(source, ref destination);
             Assert.True(CompareEquals(source, destination));

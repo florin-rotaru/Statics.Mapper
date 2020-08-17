@@ -1,6 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
 using Models;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 namespace Benchmark.Benchmarks
@@ -12,6 +13,7 @@ namespace Benchmark.Benchmarks
         private readonly IEnumerable<int> Enumerable;
         private readonly CustomEnumerable CustomEnumerable = new CustomEnumerable();
         private readonly Dictionary<int, int> Dictionary;
+        KeyValuePair<int, int>[] DictionaryEntries;
         private readonly IEnumerable<KeyValuePair<int, int>> KeyValuePairsEnumerable;
         private readonly IList<int> IList = new List<int>();
         private readonly List<int> List = new List<int>();
@@ -24,13 +26,12 @@ namespace Benchmark.Benchmarks
             var entries = 256;
 
             var array = new int[entries];
-            var dictionary = new Dictionary<int, int>(entries);
-
-
+            Dictionary = new Dictionary<int, int>(entries);
+            
             for (int i = 0; i < entries; i++)
             {
                 array[i] = i;
-                dictionary.Add(i, i);
+                Dictionary.Add(i, i);
                 IList.Add(i);
                 List.Add(i);
                 HashSet.Add(i);
@@ -39,32 +40,110 @@ namespace Benchmark.Benchmarks
 
             Enumerable = array;
             LinkedList = new LinkedList<int>(array);
-            Dictionary = dictionary;
-            KeyValuePairsEnumerable = dictionary.ToArray();
+            DictionaryEntries = new KeyValuePair<int, int>[entries];
+            ((ICollection<KeyValuePair<int, int>>)Dictionary).CopyTo(DictionaryEntries, 0);
+            KeyValuePairsEnumerable = Dictionary.ToArray();
+        }
+
+        //[Benchmark]
+        //public int DictionaryAdd()
+        //{
+        //    var length = DictionaryEntries.Length;
+        //    Dictionary<int, int> collection = new Dictionary<int, int>(length);
+
+        //    for (int i = 0; i < length; i++)
+        //        collection.Add(i, i);
+
+        //    return collection.Count;
+        //}
+
+        //[Benchmark]
+        //public int ICollectionKeyValuePairAdd()
+        //{
+        //    var length = DictionaryEntries.Length;
+        //    ICollection<KeyValuePair<int, int>> collection = new Dictionary<int, int>(length);
+
+        //    for (int i = 0; i < length; i++)
+        //        collection.Add(new KeyValuePair<int, int>(i, i));
+
+        //    return collection.Count;
+        //}
+
+        //[Benchmark]
+        //public int IDictionaryAdd()
+        //{
+        //    var length = DictionaryEntries.Length;
+        //    IDictionary<int, int> collection = new Dictionary<int, int>(length);
+
+        //    for (int i = 0; i < length; i++)
+        //        collection.Add(i, i);
+
+        //    return collection.Count;
+        //}
+
+
+
+
+
+        [Benchmark]
+        public int ICollectionAdd()
+        {
+            var length = List.Count;
+            ICollection<int> collection = new List<int>(length);
+
+            for (int i = 0; i < length; i++)
+                collection.Add(i);
+
+            return collection.Count;
         }
 
         [Benchmark]
-        public int CustomEnumerableForeach()
+        public int IListAdd()
         {
-            int result = 0;
-            foreach (var entry in CustomEnumerable)
-                if (entry != 0)
-                    result++;
+            var length = List.Count;
+            IList<int> collection = new List<int>(length);
 
-            return result;
+            for (int i = 0; i < length; i++)
+                collection.Add(i);
+
+            return collection.Count;
         }
+
 
         [Benchmark]
-        public int CustomEnumerableToArray()
+        public int ListAdd()
         {
-            int result = 0;
-            var collection = CustomEnumerable.ToArray();
-            for (int i = 0; i < collection.Length; i++)
-                if (collection[i] != 0)
-                    result++;
+            var length = List.Count;
+            List<int> collection = new List<int>(length);
 
-            return result;
+            for (int i = 0; i < length; i++)
+                collection.Add(i);
+
+            return collection.Count;
         }
+
+        //[Benchmark]
+        //public int CustomEnumerableForeach()
+        //{
+        //    int result = 0;
+        //    foreach (var entry in CustomEnumerable)
+        //        if (entry != 0)
+        //            result++;
+
+        //    return result;
+        //}
+
+        //[Benchmark]
+        //public int CustomEnumerableToArray()
+        //{
+        //    int result = 0;
+        //    var collection = CustomEnumerable.ToArray();
+        //    for (int i = 0; i < collection.Length; i++)
+        //        if (collection[i] != 0)
+        //            result++;
+
+        //    return result;
+        //}
 
         //[Benchmark]
         //public int IEnumerableForeachLoop()
@@ -165,27 +244,6 @@ namespace Benchmark.Benchmarks
         //            result++;
 
         //    return result;
-        //}
-
-
-        //[Benchmark]
-        //public int IListAdd()
-        //{
-        //    int entries = 256;
-        //    for (int i = 0; i < entries; i++)
-        //        IList.Add(i);
-
-        //    return IList.Count;
-        //}
-
-        //[Benchmark]
-        //public int ListAdd()
-        //{
-        //    int entries = 256;
-        //    for (int i = 0; i < entries; i++)
-        //        List.Add(i);
-
-        //    return List.Count;
         //}
 
 

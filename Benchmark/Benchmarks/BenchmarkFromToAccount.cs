@@ -95,14 +95,12 @@ namespace Benchmark
 
         [Benchmark]
         public AccountDto MapsterMap1() => _source.Adapt<AccountDto>();
+        //[Benchmark]
+        //public AccountDto MapsterMap2() => _source.Adapt<AccountDto>();
 
         [Benchmark]
         public AccountDto AirMapperMap1() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
-
-        [Benchmark]
-        public AccountDto MapsterMap2() => _source.Adapt<AccountDto>();
-
-        [Benchmark]
-        public AccountDto AirMapperMap2() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
+        //[Benchmark]
+        //public AccountDto AirMapperMap2() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
     }
 }

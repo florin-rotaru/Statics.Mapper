@@ -1,20 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Emit;
 
 namespace Air.Mapper.Internal
 {
     internal class ActionRefCompiler : Compiler
     {
-        public ActionRefCompiler(Type sourceType, Type destinationType, MethodType methodType, List<IMapOption> mapOptions) : 
-            base(sourceType, destinationType, methodType, mapOptions) 
+        public ActionRefCompiler(Type sourceType, Type destinationType, MethodType methodType, IEnumerable<IMapOption> mapOptions) :
+            base(sourceType, destinationType, methodType, mapOptions)
         { }
-        //{
-        //    SourceType = sourceType;
-        //    DestinationType = destinationType;
-        //    MethodType = methodType;
-        //    MapOptions = mapOptions;
-        //}
 
         private protected DynamicMethod Method { get; set; }
 
@@ -29,14 +24,13 @@ namespace Air.Mapper.Internal
             }
 
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
-            {
-                IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
-                IL.EmitInit(Schema.DestinationRootNode.Local.LocalType);
-
-                Schema.DestinationRootNode.Loaded = true;
-            }
+                Init(Schema.DestinationRootNode);
 
             MapSourceNodes(Schema.SourceRootNode);
+
+            if (Schema.DestinationRootNode.NullableUnderlyingType == null &&
+                Schema.DestinationNodes.Any(node => node.Load && node.Depth != 0))
+                InitIfNull(Schema.DestinationRootNode);
 
             ReturnDestinationRootNode();
         }
@@ -96,8 +90,7 @@ namespace Air.Mapper.Internal
                 {
                     IL.EmitLoadArgument(destinationNode.Type, 1, true);
                     IL.Emit(OpCodes.Ldind_Ref);
-                    IL.EmitBrtrue_s(
-                       () => newInstance());
+                    IL.EmitBrtrue_s(() => newInstance());
                 }
             }
             else if (sourceNode.Type.IsValueType)
@@ -106,8 +99,7 @@ namespace Air.Mapper.Internal
                 {
                     IL.EmitLoadArgument(destinationNode.Type, 1, true);
                     IL.Emit(OpCodes.Ldind_Ref);
-                    IL.EmitBrtrue_s(
-                       () => newInstance());
+                    IL.EmitBrtrue_s(() => newInstance());
                 }
             }
             else
@@ -124,14 +116,12 @@ namespace Air.Mapper.Internal
                 {
                     IL.EmitLoadArgument(destinationNode.Type, 1, true);
                     IL.Emit(OpCodes.Call, destinationNode.Type.GetProperty(HasValue).GetGetMethod());
-                    IL.EmitBrtrue_s(
-                        () => newInstance());
+                    IL.EmitBrtrue_s(() => newInstance());
                 }
                 else if (!destinationNode.Type.IsValueType)
                 {
                     IL.EmitLoadArgument(destinationNode.Type, 1, true);
-                    IL.EmitBrfalse_s(
-                        () => newInstance());
+                    IL.EmitBrfalse_s(() => newInstance());
                 }
             }
 
@@ -160,9 +150,30 @@ namespace Air.Mapper.Internal
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
             {
                 IL.EmitLdarg(1);
-                IL.EmitLdloc(Schema.DestinationRootNode.Local.LocalIndex);
+
+                if (Schema.DestinationRootNode.IsKeyValuePair)
+                {
+                    IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
+                    IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetMethod(nameof(KeyValue<Type, Type>.ToKeyValuePair)));
+                }
+                else
+                {
+                    IL.EmitLdloc(Schema.DestinationRootNode.Local.LocalIndex);
+                }
+
                 IL.Emit(OpCodes.Newobj, Schema.DestinationRootNode.Type.GetConstructor(new Type[] { Schema.DestinationRootNode.NullableUnderlyingType }));
                 IL.Emit(OpCodes.Stobj, Schema.DestinationRootNode.Type);
+            }
+            else if (Schema.DestinationRootNode.IsKeyValuePair)
+            {
+                IL.EmitLdarg(1);
+                IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
+                IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetMethod(nameof(KeyValue<Type, Type>.ToKeyValuePair)));
+                IL.Emit(OpCodes.Stobj, typeof(KeyValuePair<,>).MakeGenericType(new Type[]
+                {
+                    Schema.DestinationRootNode.Type.GenericTypeArguments[0],
+                    Schema.DestinationRootNode.Type.GenericTypeArguments[1]
+                }));
             }
 
             IL.Emit(OpCodes.Ret);
@@ -170,7 +181,12 @@ namespace Air.Mapper.Internal
 
         private void CreateSignature(bool debug)
         {
-            Method = new DynamicMethod($"{nameof(Air)}{Guid.NewGuid():N}", null, new[] { SourceType, DestinationType.MakeByRefType() }, DestinationType.Module, skipVisibility: false);
+            Method = new DynamicMethod(
+                $"{nameof(Air)}{Guid.NewGuid():N}",
+                null,
+                new[] { SourceType, DestinationType.MakeByRefType() },
+                typeof(Mapper<,>).MakeGenericType(SourceType, DestinationType).Module,
+                skipVisibility: true);
             IL = new Reflection.Emit.ILGenerator(Method.GetILGenerator(), debug);
         }
 
@@ -255,7 +271,7 @@ namespace Air.Mapper.Internal
         }
 
         private void CompileMethod(bool debug)
-        {   
+        {
             CheckArguments();
 
             CreateSignature(debug);
@@ -264,14 +280,14 @@ namespace Air.Mapper.Internal
             CreateBody();
         }
 
-        public DynamicMethod Compile(List<IMapOption> mapOptions = null)
+        public DynamicMethod Compile(IEnumerable<IMapOption> mapOptions = null)
         {
             MapOptions = mapOptions;
             CompileMethod(false);
             return Method;
         }
 
-        public string ViewIL(List<IMapOption> mapOptions = null)
+        public string ViewIL(IEnumerable<IMapOption> mapOptions = null)
         {
             MapOptions = mapOptions;
             CompileMethod(true);

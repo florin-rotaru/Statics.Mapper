@@ -16,13 +16,13 @@ namespace Benchmark
         {
 
 
-            new From_Account_To_AccountDto();
+            //new From_Account_To_AccountDto();
 
             //BenchmarkRunner.Run<IterateIEnumerable>();
 
             //BenchmarkRunner.Run<CollectionsToArray>();
 
-            //BenchmarkRunner.Run<From_Account_To_AccountDto>();
+            BenchmarkRunner.Run<From_Account_To_AccountDto>();
 
             //BenchmarkRunner.Run<From_TC0_Members_To_TC0_I0_Members>();
             //BenchmarkRunner.Run<From_TC0_Members_To_TC0_I1_Members>();
@@ -60,21 +60,21 @@ namespace Benchmark
 
         public static void RunBenchmark()
         {
+            var entries = 102400;
             var source = new List<TC0_I0_Members>();
-            for (int i = 0; i < 10240; i++)
+            for (int i = 0; i < entries; i++)
                 source.Add(new Fixture().Create<TC0_I0_Members>());
 
-            var destination = new TC0_I0_Members[10240];
+            var destination = new TC0_I0_Members[entries];
 
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            for (int i = 0; i < source.Count; i++)
-                destination = source.Adapt<TC0_I0_Members[]>();
+            destination = source.Adapt<TC0_I0_Members[]>();
             stopwatch.Stop();
             WriteLine("MapsterAdapt", stopwatch);
 
-            int runs = 1;
+            int runs = 0;
             while (runs < 2)
             {
                 Console.WriteLine($" =======  Run: {runs}; Actions: {source.Count};  =======");
@@ -82,7 +82,7 @@ namespace Benchmark
                 for (int i = 0; i < source.Count; i++)
                     destination[i] = Mapper<TC0_I0_Members, TC0_I0_Members>.Map(source[i]);
                 stopwatch.Stop();
-                WriteLine("AirMapepr", stopwatch);
+                WriteLine("AirMapper", stopwatch);
 
                 stopwatch.Restart();
                 for (int i = 0; i < source.Count; i++)

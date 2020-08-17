@@ -7,15 +7,9 @@ namespace Air.Mapper.Internal
 {
     internal class FuncCompiler : Compiler
     {
-        public FuncCompiler(Type sourceType, Type destinationType, MethodType methodType, List<IMapOption> mapOptions) :
+        public FuncCompiler(Type sourceType, Type destinationType, MethodType methodType, IEnumerable<IMapOption> mapOptions) :
             base(sourceType, destinationType, methodType, mapOptions)
         { }
-        //{
-        //    SourceType = sourceType;
-        //    DestinationType = destinationType;
-        //    MethodType = methodType;
-        //    MapOptions = mapOptions;
-        //}
 
         private protected DynamicMethod Method { get; set; }
 
@@ -30,14 +24,13 @@ namespace Air.Mapper.Internal
             }
 
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
-            {
-                IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
-                IL.EmitInit(Schema.DestinationRootNode.Local.LocalType);
-
-                Schema.DestinationRootNode.Loaded = true;
-            }
+                Init(Schema.DestinationRootNode);
 
             MapSourceNodes(Schema.SourceRootNode);
+
+            if (Schema.DestinationRootNode.NullableUnderlyingType == null && 
+                Schema.DestinationNodes.Any(node => node.Load && node.Depth != 0))
+                InitIfNull(Schema.DestinationRootNode);
 
             ReturnDestinationRootNode();
         }
@@ -96,8 +89,7 @@ namespace Air.Mapper.Internal
             {
                 IL.EmitLoadArgument(sourceNode.Type, 0);
                 IL.Emit(OpCodes.Call, sourceNode.Type.GetProperty(HasValue).GetGetMethod());
-                IL.EmitBrfalse_s(
-                    () => newInstance());
+                IL.EmitBrfalse_s(() => newInstance());
 
                 loadDestination();
             }
@@ -110,8 +102,7 @@ namespace Air.Mapper.Internal
             else
             {
                 IL.EmitLoadArgument(sourceNode.Type, 0);
-                IL.EmitBrfalse_s(
-                    () => newInstance());
+                IL.EmitBrfalse_s(() => newInstance());
 
                 loadDestination();
             }
@@ -137,7 +128,7 @@ namespace Air.Mapper.Internal
                 }
 
                 sourceNode =
-                    Schema.GetChildNodes(sourceNode, 1, sn => sn.Load).FirstOrDefault();
+                    Schema.GetChildNodes(sourceNode, sn => sn.Load, 1).FirstOrDefault();
             }
 
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
@@ -196,21 +187,48 @@ namespace Air.Mapper.Internal
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
             {
                 IL.EmitLdloca(Schema.DestinationRootNode.NullableLocal.LocalIndex);
-                IL.EmitLdloc(Schema.DestinationRootNode.Local.LocalIndex);
+
+                if (Schema.DestinationRootNode.IsKeyValuePair)
+                {
+                    IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
+                    IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetMethod(nameof(KeyValue<Type, Type>.ToKeyValuePair)));
+                }
+                else
+                {
+                    IL.EmitLdloc(Schema.DestinationRootNode.Local.LocalIndex);
+                }
+
                 IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetConstructor(new Type[] { Schema.DestinationRootNode.NullableUnderlyingType }));
             }
 
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
+            {
                 IL.EmitLdloc(Schema.DestinationRootNode.NullableLocal.LocalIndex);
+            }
             else
-                IL.EmitLdloc(Schema.DestinationRootNode.Local.LocalIndex);
+            {
+                if (Schema.DestinationRootNode.IsKeyValuePair)
+                {
+                    IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
+                    IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetMethod(nameof(KeyValue<Type, Type>.ToKeyValuePair)));
+                }
+                else
+                {
+                    IL.EmitLdloc(Schema.DestinationRootNode.Local.LocalIndex);
+                }
+            }
 
             IL.Emit(OpCodes.Ret);
         }
 
         private void CreateSignature(bool debug)
         {
-            Method = new DynamicMethod($"{nameof(Air)}{Guid.NewGuid():N}", DestinationType, new[] { SourceType }, DestinationType.Module, skipVisibility: false);
+            Method = new DynamicMethod(
+                $"{nameof(Air)}{Guid.NewGuid():N}", 
+                DestinationType, 
+                new[] { SourceType },
+                typeof(Mapper<,>).MakeGenericType(SourceType, DestinationType).Module,
+                skipVisibility: true);
             IL = new Reflection.Emit.ILGenerator(Method.GetILGenerator(), debug);
         }
 
@@ -311,14 +329,14 @@ namespace Air.Mapper.Internal
             CreateBody();
         }
 
-        public DynamicMethod Compile(List<IMapOption> mapOptions = null)
+        public DynamicMethod Compile(IEnumerable<IMapOption> mapOptions = null)
         {
             MapOptions = mapOptions;
             CompileMethod(false);
             return Method;
         }
 
-        public string ViewIL(List<IMapOption> mapOptions = null)
+        public string ViewIL(IEnumerable<IMapOption> mapOptions = null)
         {
             MapOptions = mapOptions;
             CompileMethod(true);

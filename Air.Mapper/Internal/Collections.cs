@@ -11,31 +11,34 @@ namespace Air.Mapper.Internal
     {
         public class Collection
         {
-            public Type Type { get; }
-            public Type LocalType { get; }
-
+            public Type GenericTypeDefinition { get; }
+            public Type LocalGenericTypeDefinition { get; }
             public bool IsImmutable { get; }
-            public Collection(Type type, Type localType, bool isImmutable)
+
+            public Type MakeLocalGenericType(params Type[] typeArguments) =>
+                LocalGenericTypeDefinition.MakeGenericType(typeArguments);
+
+            public Collection(Type genericTypeDefinition, Type localGenericTypeDefinition, bool isImmutable)
             {
-                Type = type;
-                LocalType = localType;
+                GenericTypeDefinition = genericTypeDefinition;
+                LocalGenericTypeDefinition = localGenericTypeDefinition;
                 IsImmutable = isImmutable;
             }
         }
 
-        public static List<Collection> MaintainableGenericCollections { get; } = new List<Collection>()
+        public static IEnumerable<Collection> MaintainableGenericCollections { get; } = new List<Collection>()
         {
-            new Collection(typeof(ICollection<>), typeof(List<>), false),
+            new Collection(typeof(IImmutableList<>), typeof(List<>), true),
+            new Collection(typeof(IImmutableDictionary<,>), typeof(List<>), true),
+            new Collection(typeof(IImmutableSet<>),typeof(List<>), true),
+            new Collection(typeof(IImmutableQueue<>), typeof(List<>), true),
+            new Collection(typeof(IImmutableStack<>), typeof(List<>), true),
 
             new Collection(typeof(IList<>), typeof(List<>), false),
             new Collection(typeof(IDictionary<,>), typeof(Dictionary<,>), false),
             new Collection(typeof(IProducerConsumerCollection<>), typeof(ConcurrentBag<>), false),
 
-            new Collection(typeof(IImmutableList<>), typeof(List<>), true),
-            new Collection(typeof(IImmutableDictionary<,>), typeof(ImmutableDictionary<,>), true),
-            new Collection(typeof(IImmutableSet<>),typeof(List<>), true),
-            new Collection(typeof(IImmutableQueue<>), typeof(List<>), true),
-            new Collection(typeof(IImmutableStack<>), typeof(List<>), true),
+            new Collection(typeof(ICollection<>), typeof(List<>), false),
 
             new Collection(typeof(List<>), typeof(List<>), false),
             new Collection(typeof(Dictionary<,>), typeof(Dictionary<,>), false),
@@ -63,20 +66,44 @@ namespace Air.Mapper.Internal
             new Collection(typeof(ImmutableStack<>), typeof(List<>), true)
         };
 
+        public static IEnumerable<Type> GetGenericTypeDefinitionBaseTypes(Type type)
+        {
+            Type baseType = type.BaseType;
+            while (baseType != typeof(object))
+            {
+                if (baseType.IsGenericType)
+                    yield return baseType.GetGenericTypeDefinition();
+                baseType = baseType.BaseType;
+            }
+        }
+
         public static bool CanMaintainCollection(Type collectionType)
         {
             if (collectionType.IsInterface)
                 return collectionType.IsGenericType && (
-                    MaintainableGenericCollections.Exists(t => t.Type == collectionType.GetGenericTypeDefinition()) ||
+                    MaintainableGenericCollections.Any(t => t.GenericTypeDefinition == collectionType.GetGenericTypeDefinition()) ||
                     collectionType.GetGenericTypeDefinition() == typeof(IEnumerable<>));
 
+            bool isArrayOrHasDefaultConstructor = collectionType.IsArray || collectionType.GetConstructor(Type.EmptyTypes) != null;
+
             return
-                collectionType.GetInterfaces().Where(ci => ci.IsGenericType).Select(ci => ci.GetGenericTypeDefinition())
-                    .Intersect(MaintainableGenericCollections.Select(s => s.Type))
-                    .Any() ||
-                collectionType.GetConstructors().Any(c =>
-                    c.GetParameters().Length == 1 &&
-                    c.GetParameters()[0].ParameterType == typeof(IEnumerable<>).MakeGenericType(new[] { GetIEnumerableArgument(collectionType) }));
+                (
+                    collectionType.IsGenericType &&
+                    MaintainableGenericCollections.Any(t => t.GenericTypeDefinition == collectionType.GetGenericTypeDefinition())
+                ) ||
+                (
+                    isArrayOrHasDefaultConstructor &&
+                    GetGenericTypeDefinitionBaseTypes(collectionType)
+                        .Intersect(MaintainableGenericCollections.Select(s => s.GenericTypeDefinition))
+                        .Any()
+                ) ||
+                (
+                    isArrayOrHasDefaultConstructor &&
+                    collectionType.GetInterfaces().Where(ci => ci.IsGenericType).Select(ci => ci.GetGenericTypeDefinition())
+                        .Intersect(MaintainableGenericCollections.Select(s => s.GenericTypeDefinition))
+                        .Any()
+                ) ||
+                collectionType.GetConstructor(new Type[] { typeof(IEnumerable<>).MakeGenericType(new[] { GetIEnumerableArgument(collectionType) }) }) != null;
         }
 
         public static bool IsAssignableFrom(Type type, Type genericTypeInterface) =>
@@ -89,9 +116,6 @@ namespace Air.Mapper.Internal
 
         public static List<PropertyInfo> GetIndexParameters(Type type, Func<PropertyInfo, bool> predicate = null) =>
             type.GetProperties().Where(p => p.GetIndexParameters().Length != 0 && (predicate == null || predicate(p))).ToList();
-
-        public static Type MakeGenericIEnumerableType(Type elementType) =>
-           typeof(IEnumerable<>).MakeGenericType(new[] { elementType });
 
         public static bool ToKeyValuePairCollectionArgumentPredicate(Type argument) =>
            argument.IsGenericType &&

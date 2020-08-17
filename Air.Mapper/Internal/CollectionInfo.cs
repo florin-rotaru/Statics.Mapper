@@ -9,7 +9,7 @@ namespace Air.Mapper.Internal
         public DestinationNodeMember DestinationNodeMember { get; }
         public Type SourceType { get; }
         public Type DestinationType { get; }
-
+        
         public Type SourceArgument { get; }
         public Type DestinationArgument { get; }
 
@@ -18,6 +18,8 @@ namespace Air.Mapper.Internal
 
         public LocalBuilder LoopIndex { get; set; }
         public LocalBuilder LoopLength { get; set; }
+
+        public LocalBuilder SourceLocalEnumerator { get; set; }
 
         public LocalBuilder MapperMapMethodLocal { get; set; }
 

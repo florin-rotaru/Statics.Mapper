@@ -6,13 +6,13 @@ namespace Air.Mapper.Internal
 {
     internal interface INode
     {
-        string Name { get; set; }
-        int Depth { get; set; }
-        Type Type { get; set; }
-        Type NullableUnderlyingType { get; set; }
+        string Name { get;  }
+        int Depth { get; }
+        Type Type { get; }
+        Type NullableUnderlyingType { get; }
         LocalBuilder Local { get; set; }
         LocalBuilder NullableLocal { get; set; }
-        bool IsStatic { get; set; }
+        bool IsStatic { get; }
 
         MemberInfo MemberInfo { get; set; }
     }
