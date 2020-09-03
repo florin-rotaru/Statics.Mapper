@@ -67,7 +67,7 @@ namespace Playground
                     destination = Mapper<TC0_I0_Members[], TC0_I0_Members[]>.Map(source);
 
                 stopwatch.Stop();
-                WriteLine("ToArray1", stopwatch);
+                WriteLine("ToArray", stopwatch);
 
                 Console.WriteLine($"cicle {runs}, {destination.Length} entries map");
 

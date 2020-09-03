@@ -23,22 +23,28 @@ namespace Playground
 
 
         [Fact]
-        public void ArrayRank2()
+        public void MultidimensionalArray()
         {
             Assert.Throws<NotSupportedException>(() => Mapper<int[,], int[,]>.CompileFunc());
         }
 
         [Fact]
-        public void SzArray()
+        public void JaggedArray()
         {
-            Assert.Throws<NotSupportedException>(() => Mapper<int[][], int[][]>.CompileFunc());
+            var source = Fixture.Create<int[][]>();
+            var mapFunc = Mapper<int[][], int[][]>.CompileFunc();
+            var destination = mapFunc(source);
+            Assert.True(CompareEquals(source, destination));
+
+            destination = null;
+            var mapAction = Mapper<int[][], int[][]>.CompileActionRef();
+            mapAction(source, ref destination);
+            Assert.True(CompareEquals(source, destination));
         }
 
         [Fact]
         public void BuiltInValueTypes()
         {
-            var il = Mapper<int[], int[]>.ViewFuncIL();
-
             var source = Fixture.Create<int[]>();
             var mapFunc = Mapper<int[], int[]>.CompileFunc();
             var destination = mapFunc(source);

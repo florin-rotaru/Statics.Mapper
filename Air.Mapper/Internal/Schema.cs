@@ -410,10 +410,6 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private static bool CanMapArray(Type arrayType) =>
-            arrayType.GetArrayRank() == 1 &&
-            !arrayType.IsSZArray;
-
         private static bool CanMapCollection(
             Type sourceType,
             Type destinationType)
@@ -422,10 +418,10 @@ namespace Air.Mapper.Internal
                 IsCollection(destinationType))
                 return false;
 
-            if (sourceType.IsArray && !CanMapArray(sourceType))
+            if (sourceType.IsArray && sourceType.GetArrayRank() != 1)
                 return false;
 
-            if (destinationType.IsArray && !CanMapArray(destinationType))
+            if (destinationType.IsArray && destinationType.GetArrayRank() != 1)
                 return false;
 
             if (!CanMaintainCollection(sourceType, destinationType))

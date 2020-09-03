@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AgileObjects.AgileMapper" Version="1.7.1" />
+    <PackageReference Include="AgileObjects.AgileMapper" Version="1.7.2" />
     <PackageReference Include="AutoFixture" Version="4.13.0" />
     <PackageReference Include="AutoMapper" Version="10.0.0" />
     <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
