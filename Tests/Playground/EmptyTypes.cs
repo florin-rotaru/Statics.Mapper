@@ -4,6 +4,7 @@ using Xunit;
 
 namespace Playground
 {
+    [Collection(nameof(Playground))]
     public class EmptyTypes
     {
         [Fact]

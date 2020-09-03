@@ -19,30 +19,24 @@ namespace Air.Mapper
 
         public delegate void ActionRef(S source, ref D destination);
 
-        public static void Configure(Action<MapOptions<S, D>> mapOptions = null)
-        {
-            CompiledActionRef = CompileActionRef(mapOptions);
-            CompiledFunc = CompileFunc(mapOptions);
-        }
-
         private static Func<S, D> CompileFunc(IEnumerable<IMapOption> mapOptions = null) =>
-           (Func<S, D>)new FuncCompiler(typeof(S), typeof(D), MethodType.Function, new List<IMapOption>())
+           (Func<S, D>)new FuncCompiler(typeof(S), typeof(D), MethodType.Function)
                .Compile(mapOptions)
                .CreateDelegate(typeof(Func<S, D>));
         public static Func<S, D> CompileFunc(Action<MapOptions<S, D>> mapOptions = null) =>
             CompileFunc(ParseMapOptions(mapOptions));
 
         private static ActionRef CompileActionRef(IEnumerable<IMapOption> mapOptions = null) =>
-             (ActionRef)new ActionRefCompiler(typeof(S), typeof(D), MethodType.ActionRef, new List<IMapOption>())
+             (ActionRef)new ActionRefCompiler(typeof(S), typeof(D), MethodType.ActionRef)
                 .Compile(mapOptions)
                 .CreateDelegate(typeof(ActionRef));
         public static ActionRef CompileActionRef(Action<MapOptions<S, D>> mapOptions = null) =>
              CompileActionRef(ParseMapOptions(mapOptions));
 
         public static string ViewFuncIL(Action<MapOptions<S, D>> mapOptions = null) =>
-            new FuncCompiler(typeof(S), typeof(D), MethodType.Function, new List<IMapOption>()).ViewIL(ParseMapOptions(mapOptions));
+            new FuncCompiler(typeof(S), typeof(D), MethodType.Function).ViewIL(ParseMapOptions(mapOptions));
         public static string ViewActionRefIL(Action<MapOptions<S, D>> mapOptions = null) =>
-            new ActionRefCompiler(typeof(S), typeof(D), MethodType.ActionRef, new List<IMapOption>()).ViewIL(ParseMapOptions(mapOptions));
+            new ActionRefCompiler(typeof(S), typeof(D), MethodType.ActionRef).ViewIL(ParseMapOptions(mapOptions));
 
         public static D Map(S source) => CompiledFunc(source);
         public static void Map(S source, ref D destination) => CompiledActionRef(source, ref destination);

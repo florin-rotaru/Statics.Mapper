@@ -8,7 +8,7 @@ using System.Linq;
 namespace Benchmark
 {
     [InProcess]
-    public class BenchmarkFromToN1<S, D>
+    public class FromToN1<S, D>
     {
         private readonly S _source;
         private readonly IMapper _autoMapper;
@@ -17,7 +17,7 @@ namespace Benchmark
         S NewSource() =>
             Air.Mapper.Mapper<TC1, S>.Map(_fixture.Create<TC1>());
 
-        public BenchmarkFromToN1()
+        public FromToN1()
         {
             _fixture = new Fixture();
             _fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList()

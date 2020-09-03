@@ -1,6 +1,5 @@
 ﻿using Air.Mapper;
 using AutoFixture;
-using Benchmark.Benchmarks;
 using BenchmarkDotNet.Running;
 using Mapster;
 using Models;
@@ -14,15 +13,16 @@ namespace Benchmark
     {
         private static void Main(string[] args)
         {
+            BenchmarkRunner.Run<Collections>();
 
+            //BenchmarkRunner.Run<From_Account_To_AccountDto>();
 
-            //new From_Account_To_AccountDto();
+            //BenchmarkRunner.Run<EnumToString>();
+            //BenchmarkRunner.Run<Immutables>();
 
             //BenchmarkRunner.Run<IterateIEnumerable>();
 
             //BenchmarkRunner.Run<CollectionsToArray>();
-
-            BenchmarkRunner.Run<From_Account_To_AccountDto>();
 
             //BenchmarkRunner.Run<From_TC0_Members_To_TC0_I0_Members>();
             //BenchmarkRunner.Run<From_TC0_Members_To_TC0_I1_Members>();

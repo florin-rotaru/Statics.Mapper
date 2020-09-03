@@ -7,8 +7,8 @@ namespace Air.Mapper.Internal
 {
     internal class ActionRefCompiler : Compiler
     {
-        public ActionRefCompiler(Type sourceType, Type destinationType, MethodType methodType, IEnumerable<IMapOption> mapOptions) :
-            base(sourceType, destinationType, methodType, mapOptions)
+        public ActionRefCompiler(Type sourceType, Type destinationType, MethodType methodType) :
+            base(sourceType, destinationType, methodType)
         { }
 
         private protected DynamicMethod Method { get; set; }
@@ -56,7 +56,7 @@ namespace Air.Mapper.Internal
                 {
                     IL.EmitLoadArgument(destinationNode.Type, 1, true);
                     IL.EmitInit(destinationNode.Type);
-                    IL.Emit(OpCodes.Stind_Ref);
+                    IL.EmitStore(destinationNode.Type);
                 }
             }
 
@@ -71,7 +71,7 @@ namespace Air.Mapper.Internal
                 {
                     IL.EmitLoadArgument(destinationNode.Type, 1, true);
                     IL.Emit(OpCodes.Ldnull);
-                    IL.Emit(OpCodes.Stind_Ref);
+                    IL.EmitStore(destinationNode.Type);
                 }
             }
 
@@ -139,7 +139,7 @@ namespace Air.Mapper.Internal
             {
                 IL.EmitLdarg(1);
                 IL.Emit(OpCodes.Ldnull);
-                IL.Emit(OpCodes.Stind_Ref);
+                IL.EmitStore(Schema.DestinationRootNode.Type);
             }
 
             IL.Emit(OpCodes.Ret);
@@ -151,10 +151,10 @@ namespace Air.Mapper.Internal
             {
                 IL.EmitLdarg(1);
 
-                if (Schema.DestinationRootNode.IsKeyValuePair)
+                if (Schema.DestinationRootNode.TypeAdapter != null)
                 {
                     IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
-                    IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetMethod(nameof(KeyValue<Type, Type>.ToKeyValuePair)));
+                    IL.Emit(OpCodes.Call, Schema.DestinationRootNode.TypeAdapter.GetMethod(TypeAdapters.ToMethodName(Schema.DestinationRootNode.Type)));
                 }
                 else
                 {
@@ -164,16 +164,12 @@ namespace Air.Mapper.Internal
                 IL.Emit(OpCodes.Newobj, Schema.DestinationRootNode.Type.GetConstructor(new Type[] { Schema.DestinationRootNode.NullableUnderlyingType }));
                 IL.Emit(OpCodes.Stobj, Schema.DestinationRootNode.Type);
             }
-            else if (Schema.DestinationRootNode.IsKeyValuePair)
+            else if (Schema.DestinationRootNode.TypeAdapter != null)
             {
                 IL.EmitLdarg(1);
                 IL.EmitLdloca(Schema.DestinationRootNode.Local.LocalIndex);
-                IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetMethod(nameof(KeyValue<Type, Type>.ToKeyValuePair)));
-                IL.Emit(OpCodes.Stobj, typeof(KeyValuePair<,>).MakeGenericType(new Type[]
-                {
-                    Schema.DestinationRootNode.Type.GenericTypeArguments[0],
-                    Schema.DestinationRootNode.Type.GenericTypeArguments[1]
-                }));
+                IL.Emit(OpCodes.Call, Schema.DestinationRootNode.TypeAdapter.GetMethod(TypeAdapters.ToMethodName(Schema.DestinationRootNode.Type)));
+                IL.Emit(OpCodes.Stobj, Schema.DestinationRootNode.TypeAdapter);
             }
 
             IL.Emit(OpCodes.Ret);
@@ -192,6 +188,17 @@ namespace Air.Mapper.Internal
 
         private void CreateBody()
         {
+            #region Destination: Collection
+
+            if (Collections.IsCollection(DestinationType))
+            {
+                MapCollection(SourceType, DestinationType);
+
+                return;
+            }
+
+            #endregion
+
             #region Destination: Abstract / Interface
 
             if (DestinationType.IsAbstract || DestinationType.IsInterface)

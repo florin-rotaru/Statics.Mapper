@@ -9,9 +9,11 @@ namespace Air.Mapper.Internal
         public DestinationNodeMember DestinationNodeMember { get; }
         public Type SourceType { get; }
         public Type DestinationType { get; }
-        
+
         public Type SourceArgument { get; }
         public Type DestinationArgument { get; }
+
+        public bool UseArrayCopyTo { get; }
 
         public LocalBuilder SourceLocal { get; set; }
         public LocalBuilder DestinationLocal { get; set; }
@@ -23,14 +25,26 @@ namespace Air.Mapper.Internal
 
         public LocalBuilder MapperMapMethodLocal { get; set; }
 
-        public CollectionInfo(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember)
+
+        public CollectionInfo(Type sourceType, Type destinationType)
+        {
+            SourceType = sourceType;
+            DestinationType = destinationType;
+            SourceArgument = Collections.GetIEnumerableArgument(SourceType);
+            DestinationArgument = Collections.GetIEnumerableArgument(DestinationType);
+            UseArrayCopyTo = sourceType.IsArray &&
+                sourceType == destinationType &&
+                (
+                    SourceArgument.IsValueType ||
+                    Reflection.TypeInfo.IsBuiltIn(SourceArgument)
+                );
+        }
+
+        public CollectionInfo(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember) :
+            this(destinationNodeMember.SourceNodeMember.Type, destinationNodeMember.Info.Type)
         {
             DestinationNode = destinationNode;
             DestinationNodeMember = destinationNodeMember;
-            SourceType = DestinationNodeMember.SourceNodeMember.Type;
-            DestinationType = DestinationNodeMember.Info.Type;
-            SourceArgument = Collections.GetIEnumerableArgument(SourceType);
-            DestinationArgument = Collections.GetIEnumerableArgument(DestinationType);
         }
     }
 }

@@ -7,7 +7,7 @@ namespace Air.Mapper.Internal
 {
     internal class SourceNode : INode
     {
-        public string Name { get;  }
+        public string Name { get; }
         public int Depth { get; }
         public Type Type { get; }
         public Type NullableUnderlyingType { get; }
@@ -24,8 +24,8 @@ namespace Air.Mapper.Internal
 
         public SourceNode ParentNode { get; set; }
         public List<SourceNode> ParentNodes { get; set; }
-       
-        public SourceNode(TypeNode node) 
+
+        public SourceNode(TypeNode node)
         {
             Name = node.Name;
             Depth = node.Depth;

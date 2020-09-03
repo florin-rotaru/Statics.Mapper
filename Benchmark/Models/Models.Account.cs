@@ -3,6 +3,21 @@ using System.Collections.Generic;
 
 namespace Models
 {
+
+    public enum AccountStatus
+    {
+        Undefined,
+        Locked,
+        Enabled
+    }
+
+    public enum OrderStatus
+    {
+        Undefined,
+        Pending,
+        Completed
+    }
+
     public class Address
     {
         public Guid Id { get; set; }
@@ -60,6 +75,7 @@ namespace Models
 
     public class Order
     {
+        public OrderStatus Status { get; set; }
         public Address DeliveryAddresses { get; set; }
         public DateTime OrderDate { get; set; }
         public DateTime EstimatedDeliveryDate { get; set; }
@@ -69,6 +85,7 @@ namespace Models
 
     public class OrderDto
     {
+        public string Status { get; set; }
         public AddressDto DeliveryAddresses { get; set; }
         public DateTime OrderDate { get; set; }
         public DateTime EstimatedDeliveryDate { get; set; }
@@ -79,6 +96,7 @@ namespace Models
 
     public class Account
     {
+        public AccountStatus Status { get; set; }
         public Guid Id { get; set; }
         public string Name { get; set; }
 
@@ -120,7 +138,7 @@ namespace Models
 
 
         public Address DefaultDeliveryAddress { get; set; }
-        
+
 
         public List<Order> Orders { get; set; }
         public List<Order> Orders1 { get; set; }
@@ -144,6 +162,7 @@ namespace Models
 
     public class AccountDto
     {
+        public string Status { get; set; }
         public Guid Id { get; set; }
         public string Name { get; set; }
 
@@ -182,7 +201,7 @@ namespace Models
 
 
         public AddressDto DefaultDeliveryAddress { get; set; }
-        
+
         public List<OrderDto> Orders { get; set; }
         //public List<OrderDto> Orders1 { get; set; }
         //public List<OrderDto> Orders2 { get; set; }

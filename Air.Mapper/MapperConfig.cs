@@ -14,7 +14,7 @@ namespace Air.Mapper
         {
             if (IsConfigured && !overwrite)
                 throw new InvalidOperationException($"{nameof(Options)} for {typeof(S).Name} and {typeof(D).Name} already set!");
-            
+
             MapOptions<S, D> mapOptions = new MapOptions<S, D>();
             options.Invoke(mapOptions);
             Options = mapOptions.Get().ToList();

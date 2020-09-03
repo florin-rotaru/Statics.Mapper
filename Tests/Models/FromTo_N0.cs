@@ -101,7 +101,7 @@ namespace Internal
             {
                 AssertInstanceOrDefaultReadonly(source, destination);
                 return;
-            }           
+            }
 
             Assert.True(CanSerialize(source, destination));
 
@@ -291,8 +291,6 @@ namespace Internal
             var mapActionRef = Mapper<S, D>.CompileActionRef();
             var mapFunc = Mapper<S, D>.CompileFunc();
 
-            var il = Mapper<S, D>.ViewActionRefIL();
-
             // =======
             S source = NewSource();
             D destination = new D();
@@ -339,11 +337,11 @@ namespace Internal
         {
             // =======
             S[] source = NewSourceArray();
-            D[] destination = Mapper<S, D>.ToArray(source);
+            D[] destination = Mapper<S[], D[]>.Map(source);
             AssertEqualsOrDefault(source, destination, hasReadonlyMembers, hasStaticMembers);
 
             source = new S[] { };
-            destination = Mapper<S, D>.ToArray(source);
+            destination = Mapper<S[], D[]>.Map(source);
             Assert.Empty(destination);
         }
 

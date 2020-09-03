@@ -18,18 +18,6 @@ namespace Benchmark
 
         public From_Account_To_AccountDto()
         {
-            var il = Air.Mapper.Mapper<Account, AccountDto>.ViewFuncIL();
-
-
-            //_fixture = new Fixture();
-
-            //var theSource = new Dictionary<string, Dictionary<string, TC0_I0_Members>>
-            //{
-            //    { "1", new Dictionary<string, TC0_I0_Members>{{ "2", _fixture.Create<TC0_I0_Members>() } } }
-            //};
-            //var atDestination = theSource.Adapt<Dictionary<int, TC0_I0_Members>>();
-
-
             TypeAdapterConfig.GlobalSettings.SelfContainedCodeGeneration = true;
             var account = default(Account);
             var def = new ExpressionDefinitions

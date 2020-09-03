@@ -11,6 +11,7 @@ namespace Air.Mapper.Internal
         public string Name { get; }
         public int Depth { get; }
         public Type Type { get; }
+        public Type TypeAdapter { get; }
         public Type NullableUnderlyingType { get; }
         public LocalBuilder Local { get; set; }
         public LocalBuilder NullableLocal { get; set; }
@@ -26,8 +27,6 @@ namespace Air.Mapper.Internal
 
         public int MembersMapCount { get; set; }
 
-        public bool IsKeyValuePair { get; }
-
         public DestinationNode(TypeNode node)
         {
             Name = node.Name;
@@ -37,12 +36,17 @@ namespace Air.Mapper.Internal
 
             Type = node.Type;
 
-            if (Type.IsGenericType &&
-                Type.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
+            if (Type.IsGenericType)
             {
-                Type = typeof(KeyValue<,>).MakeGenericType(new Type[] { Type.GenericTypeArguments[0], Type.GenericTypeArguments[1] });
-                IsKeyValuePair = true;
-                Members = TypeInfo.GetMembers(Type).Select(s => new DestinationNodeMember(s)).ToList();
+                if (TypeAdapters.TryGetAdapterGenericTypeDefinition(Type.GetGenericTypeDefinition(), out Type adapterGenericTypeDefinition))
+                {
+                    TypeAdapter = adapterGenericTypeDefinition.MakeGenericType(Type.GenericTypeArguments);
+                    Members = TypeInfo.GetMembers(TypeAdapter).Select(s => new DestinationNodeMember(s)).ToList();
+                }
+                else
+                {
+                    Members = node.Members.Select(s => new DestinationNodeMember(s)).ToList();
+                }
             }
             else
             {

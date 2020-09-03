@@ -81,46 +81,42 @@ namespace Benchmark.Benchmarks
         //    return collection.Count;
         //}
 
+        //[Benchmark]
+        //public int ICollectionAdd()
+        //{
+        //    var length = List.Count;
+        //    ICollection<int> collection = new List<int>(length);
+
+        //    for (int i = 0; i < length; i++)
+        //        collection.Add(i);
+
+        //    return collection.Count;
+        //}
+
+        //[Benchmark]
+        //public int IListAdd()
+        //{
+        //    var length = List.Count;
+        //    IList<int> collection = new List<int>(length);
+
+        //    for (int i = 0; i < length; i++)
+        //        collection.Add(i);
+
+        //    return collection.Count;
+        //}
 
 
+        //[Benchmark]
+        //public int ListAdd()
+        //{
+        //    var length = List.Count;
+        //    List<int> collection = new List<int>(length);
 
+        //    for (int i = 0; i < length; i++)
+        //        collection.Add(i);
 
-        [Benchmark]
-        public int ICollectionAdd()
-        {
-            var length = List.Count;
-            ICollection<int> collection = new List<int>(length);
-
-            for (int i = 0; i < length; i++)
-                collection.Add(i);
-
-            return collection.Count;
-        }
-
-        [Benchmark]
-        public int IListAdd()
-        {
-            var length = List.Count;
-            IList<int> collection = new List<int>(length);
-
-            for (int i = 0; i < length; i++)
-                collection.Add(i);
-
-            return collection.Count;
-        }
-
-
-        [Benchmark]
-        public int ListAdd()
-        {
-            var length = List.Count;
-            List<int> collection = new List<int>(length);
-
-            for (int i = 0; i < length; i++)
-                collection.Add(i);
-
-            return collection.Count;
-        }
+        //    return collection.Count;
+        //}
 
         //[Benchmark]
         //public int CustomEnumerableForeach()

@@ -14,19 +14,10 @@ namespace Air.Mapper.Internal
         public SourceNode SourceRootNode { get; private set; }
         public DestinationNode DestinationRootNode { get; private set; }
 
-        private IEnumerable<IMapOption> MapOptions { get; set; }
-
         private static readonly string Value = "Value";
         private static readonly char DOT = '.';
 
         public Schema(Type source, Type destination, IEnumerable<IMapOption> mapOptions)
-        {
-            MapOptions = mapOptions;
-            SetDefaultSchema(source, destination);
-            ApplyOptions();
-        }
-
-        public void SetDefaultSchema(Type source, Type destination)
         {
             SourceNodes = GetNodes(source, (node) => node.HasGetMethod)
                .Select(s => new SourceNode(s)).ToList();
@@ -39,7 +30,7 @@ namespace Air.Mapper.Internal
             });
 
             DestinationNodes = GetNodes(destination, (node) =>
-                (node.MemberOf.IsGenericType && node.MemberOf.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)) ||
+                (node.MemberOf.IsGenericType && TypeAdapters.ContainsAdapterGenericTypeDefinition(node.MemberOf.GetGenericTypeDefinition())) ||
                 (node.HasSetMethod && (node.HasDefaultConstructor || node.Type.IsValueType))
             )
             .Select(s => new DestinationNode(s)).ToList();
@@ -54,28 +45,96 @@ namespace Air.Mapper.Internal
             SourceRootNode = SourceNodes.First(w => w.Depth == 0);
             DestinationRootNode = DestinationNodes.First(w => w.Depth == 0);
 
-            Map(SourceRootNode, DestinationRootNode, true);
+            AdaptMapperConfigOptions(
+                SourceRootNode,
+                DestinationRootNode,
+                mapOptions,
+                out List<IMapOption> options,
+                out bool withRootOption);
 
-            OnChange();
+            if (options.Count == 0)
+            {
+                Map(SourceRootNode, DestinationRootNode, true, true);
+                OnChange();
+            }
+            else
+            {
+                if (!withRootOption)
+                    Map(SourceRootNode, DestinationRootNode, true, true);
+
+                ApplyOptions(options);
+            }
         }
 
-        private IEnumerable<IMapOption> AdaptOptions(SourceNode sourceNode, DestinationNode destinationNode, IEnumerable<IMapOption> mapperConfigOptions)
+        private void AdaptMapperConfigOptions(
+            SourceNode sourceNode,
+            DestinationNode destinationNode,
+            IEnumerable<IMapOption> mapperConfigOptions,
+            out List<IMapOption> outOptions,
+            out bool withRootOption)
         {
-            foreach (IMapOption option in mapperConfigOptions)
+            withRootOption = false;
+
+            if (mapperConfigOptions == null)
             {
-                switch (option.Name)
+                outOptions = new List<IMapOption>();
+                return;
+            }
+
+            outOptions = mapperConfigOptions.ToList();
+
+            int optionIndex = outOptions.FindLastIndex(o =>
+                GetDestinationMemberName(o) == string.Empty &&
+                o.Name == nameof(MapOptions<Type, Type>.Ignore));
+            if (optionIndex != -1)
+            {
+                outOptions = outOptions.GetRange(optionIndex, outOptions.Count - optionIndex);
+                withRootOption = true;
+            }
+
+            optionIndex = outOptions.FindLastIndex(o =>
+                GetDestinationMemberName(o) == string.Empty &&
+                o.Name == nameof(MapOptions<Type, Type>.Map));
+            if (optionIndex != -1)
+            {
+                outOptions = outOptions.GetRange(optionIndex, outOptions.Count - optionIndex);
+                withRootOption = true;
+            }
+
+            for (int i = 0; i < outOptions.Count; i++)
+            {
+                switch (outOptions[i].Name)
                 {
                     case nameof(MapOptions<Type, Type>.Ignore):
-                        IgnoreOption ignoreOption = new IgnoreOption(option);
-                        new IgnoreOption(string.Concat(destinationNode.Name, DOT, ignoreOption.DestinationMemberName)).AsMapOption();
+                        {
+                            if (destinationNode.Depth != 0)
+                            {
+                                IgnoreOption ignoreOption = new IgnoreOption(outOptions[i]);
+                                outOptions[i] = new IgnoreOption(
+                                    destinationNode.Depth != 0 ?
+                                    string.Concat(destinationNode.Name, DOT, ignoreOption.DestinationMemberName) :
+                                    ignoreOption.DestinationMemberName).AsMapOption();
+                            }
+                        }
                         break;
                     case nameof(MapOptions<Type, Type>.Map):
-                        MapOption mapOption = new MapOption(option);
-                        yield return new MapOption(
-                            string.Concat(sourceNode.Name, DOT, mapOption.SourceMemberName),
-                            string.Concat(destinationNode.Name, DOT, mapOption.DestinationMemberName),
-                            mapOption.Expand,
-                            mapOption.UseMapperConfig).AsMapOption();
+                        {
+                            if (sourceNode.Depth != 0 || destinationNode.Depth != 0)
+                            {
+                                MapOption mapOption = new MapOption(outOptions[i]);
+                                outOptions[i] = new MapOption(
+                                    sourceNode.Depth != 0 ?
+                                    string.Concat(sourceNode.Name, DOT, mapOption.SourceMemberName) :
+                                    mapOption.SourceMemberName,
+
+                                    destinationNode.Depth != 0 ?
+                                    string.Concat(destinationNode.Name, DOT, mapOption.DestinationMemberName) :
+                                    mapOption.DestinationMemberName,
+
+                                    mapOption.Expand,
+                                    mapOption.UseMapperConfig).AsMapOption();
+                            }
+                        }
                         break;
                     default:
                         break;
@@ -90,69 +149,27 @@ namespace Air.Mapper.Internal
                     .GetMethod(nameof(MapperConfig<Type, Type>.GetOptions))
                     .Invoke(null, null);
 
-        private IEnumerable<IMapOption> GetMapperConfigOptions()
+        private string GetDestinationMemberName(IMapOption option)
         {
-            List<IMapOption> options = new List<IMapOption>();
-
-            IEnumerable<IMapOption> mapperConfigOptions = GetMapperConfigOptions(SourceRootNode, DestinationRootNode);
-            if (mapperConfigOptions != null && mapperConfigOptions.Any())
+            return option.Name switch
             {
-                options.AddRange(mapperConfigOptions);
-                return options;
-            }
-
-            SourceNode sourceNode;
-            DestinationNode destinationNode;
-
-            List<DestinationNode> childNodes = GetChildNodes(DestinationRootNode).ToList();
-            Queue<DestinationNode> queue = new Queue<DestinationNode>(childNodes);
-
-            while (queue.Count != 0)
-            {
-                destinationNode = queue.Dequeue();
-                childNodes = GetChildNodes(destinationNode).ToList();
-
-                foreach (DestinationNode childNode in childNodes)
-                {
-                    sourceNode = SourceNodes.FirstOrDefault(n => n.Name.Equals(childNode.Name, StringComparison.OrdinalIgnoreCase));
-
-                    if (sourceNode == null)
-                        continue;
-
-                    mapperConfigOptions = GetMapperConfigOptions(sourceNode, childNode);
-
-                    if (mapperConfigOptions != null && mapperConfigOptions.Any())
-                        options.AddRange(AdaptOptions(sourceNode, destinationNode, mapperConfigOptions));
-                    else
-                        GetChildNodes(childNode).ToList().ForEach(n => queue.Enqueue(n));
-                }
-            }
-
-            return options;
+                nameof(MapOptions<Type, Type>.Ignore) => new IgnoreOption(option).DestinationMemberName,
+                nameof(MapOptions<Type, Type>.Map) => new MapOption(option).DestinationMemberName,
+                _ => null,
+            };
         }
 
-        private void ApplyOptions()
+        private void ApplyOptions(IEnumerable<IMapOption> options)
         {
-            List<IMapOption> options = new List<IMapOption>();
-            options.AddRange(GetMapperConfigOptions());
-
-            if (MapOptions != null)
-                options.AddRange(MapOptions);
-
-            ApplyOptions(options);
-        }
-
-        private void ApplyOptions(IEnumerable<IMapOption> mapOptions)
-        {
-            foreach (IMapOption option in mapOptions)
+            foreach (IMapOption option in options)
             {
                 switch (option.Name)
                 {
                     case nameof(MapOptions<Type, Type>.Ignore):
-                        Ignore(option);
+                        ApplyIgnoreOption(option);
                         break;
                     case nameof(MapOptions<Type, Type>.Map):
-                        Map(option);
+                        ApplyMapOption(option);
                         break;
                     default:
                         throw new NotImplementedException($"Option {option.Name} not implemented!");
@@ -160,17 +177,42 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private void Map(IMapOption option)
+        private void ApplyIgnoreOption(IMapOption option)
         {
-            MapOption mapOption = new MapOption(option);
-            Map(mapOption.SourceMemberName, mapOption.DestinationMemberName, mapOption.Expand, mapOption.UseMapperConfig);
+            IgnoreOption ignoreOption = new IgnoreOption(option);
+            ApplyIgnoreOption(new[] { ignoreOption.DestinationMemberName });
         }
 
-        private void Map(SourceNode sourceNode, DestinationNode destinationNode, bool expand)
+        private void ApplyMapOption(IMapOption option)
         {
+            MapOption mapOption = new MapOption(option);
+            ApplyMapOption(mapOption.SourceMemberName, mapOption.DestinationMemberName, mapOption.Expand, mapOption.UseMapperConfig);
+        }
+
+        private void Map(SourceNode sourceNode, DestinationNode destinationNode, bool expand, bool useMapperConfig)
+        {
+            if (!EvaluateMap(sourceNode, destinationNode))
+                return;
+
+            List<IMapOption> options = null;
+            bool withRootOption = false;
+
+            if (useMapperConfig)
+                AdaptMapperConfigOptions(
+                    sourceNode,
+                    destinationNode,
+                    GetMapperConfigOptions(sourceNode, destinationNode),
+                    out options,
+                    out withRootOption);
+
             foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
             {
                 if (!destinationNodeMember.Info.HasSetMethod)
+                    continue;
+
+                if (useMapperConfig &&
+                    withRootOption &&
+                    options.Any(o => GetDestinationMemberName(o) == NodeMemberName(destinationNode.Name, destinationNodeMember.Info.Name)))
                     continue;
 
                 MemberInfo sourceNodeMember =
@@ -182,20 +224,29 @@ namespace Air.Mapper.Internal
                 if (sourceNodeMember.IsBuiltIn != destinationNodeMember.Info.IsBuiltIn)
                     continue;
 
-                if (IsSourceNode(NodeMemberName(sourceNode.Name, sourceNodeMember.Name)) &&
+                if (sourceNodeMember.Type == destinationNodeMember.Info.Type &&
+                    (sourceNodeMember.Type.IsInterface || sourceNodeMember.Type.IsAbstract) &&
+                    (destinationNodeMember.Info.Type.IsInterface || destinationNodeMember.Info.Type.IsAbstract))
+                {
+                    TryMapMember(sourceNode, sourceNodeMember, destinationNode, destinationNodeMember);
+                }
+                else if (IsSourceNode(NodeMemberName(sourceNode.Name, sourceNodeMember.Name)) &&
                     IsDestinationNode(NodeMemberName(destinationNode.Name, destinationNodeMember.Info.Name)))
                 {
                     SourceNode memberSourceNode = SourceNodes.First(node => node.Name == NodeMemberName(sourceNode.Name, sourceNodeMember.Name));
                     DestinationNode memberDestinationNode = DestinationNodes.First(node => node.Name == NodeMemberName(destinationNode.Name, destinationNodeMember.Info.Name));
 
                     if (expand)
-                        Map(memberSourceNode, memberDestinationNode, expand);
+                        Map(memberSourceNode, memberDestinationNode, expand, useMapperConfig);
                 }
                 else
                 {
                     TryMapMember(sourceNode, sourceNodeMember, destinationNode, destinationNodeMember);
                 }
             }
+
+            if (useMapperConfig)
+                ApplyOptions(options);
         }
 
         private bool EvaluateMap(SourceNode sourceNode, DestinationNode destinationNode)
@@ -219,14 +270,12 @@ namespace Air.Mapper.Internal
                     if (sourceNodes[sn].Type == destinationNodes[dn].Type)
                         return false;
                 }
-
-                break;
             }
 
             return true;
         }
 
-        public void Map(string sourceMember, string destinationMember, bool expand, bool useMapperConfig)
+        public void ApplyMapOption(string sourceMember, string destinationMember, bool expand, bool useMapperConfig)
         {
             sourceMember = ResolveSourceMemberName(sourceMember);
             destinationMember = ResolveDestinationMemberName(destinationMember);
@@ -248,44 +297,39 @@ namespace Air.Mapper.Internal
                 destinationNode = DestinationNodes.First(w => w.Name == destinationMember);
 
                 if (!EvaluateMap(sourceNode, destinationNode))
-                    throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
+                    throw new InvalidOperationException(
+                        $"Cannot map from {sourceNode.Name} static [{sourceNode.Type}] to {destinationNode.Name} static [{destinationNode.Type}].");
 
-                Map(sourceNode, destinationNode, expand);
+                Map(sourceNode, destinationNode, expand, useMapperConfig);
                 OnChange();
 
                 return;
             }
 
-            try
-            {
-                sourceNode = SourceNodes.First(w => w.Name == TypeInfo.GetNodeName(sourceMember));
-                sourceNodeMember = sourceNode.Members.First(w => w.Name == TypeInfo.GetName(sourceMember));
+            sourceNode = SourceNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(sourceMember));
+            sourceNodeMember = sourceNode.Members.FirstOrDefault(w => w.Name == TypeInfo.GetName(sourceMember));
 
-                destinationNode = DestinationNodes.First(w => w.Name == TypeInfo.GetNodeName(destinationMember));
-                destinationNodeMember = destinationNode.Members.First(w => w.Info.Name == TypeInfo.GetName(destinationMember));
+            destinationNode = DestinationNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(destinationMember));
+            destinationNodeMember = destinationNode.Members.FirstOrDefault(w => w.Info.Name == TypeInfo.GetName(destinationMember));
 
-                if (!EvaluateMap(sourceNode, destinationNode))
-                    throw new InvalidOperationException();
-
-                if (!TryMapMember(
-                    sourceNode,
-                    sourceNodeMember,
-                    destinationNode,
-                    destinationNodeMember))
-                    throw new InvalidOperationException();
-
-                OnChange();
-            }
-            catch
-            {
+            if (sourceNode == null ||
+                sourceNodeMember == null ||
+                destinationNode == null ||
+                destinationNodeMember == null)
                 throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
-            }
-        }
 
-        private void Ignore(IMapOption option)
-        {
-            IgnoreOption ignoreOption = new IgnoreOption(option);
-            Ignore(new[] { ignoreOption.DestinationMemberName });
+            if (!EvaluateMap(sourceNode, destinationNode))
+                throw new InvalidOperationException(
+                    $"Cannot map from {sourceNode.Name} static [{sourceNode.Type}] to {destinationNode.Name} static [{destinationNode.Type}].");
+
+            if (!TryMapMember(
+                sourceNode,
+                sourceNodeMember,
+                destinationNode,
+                destinationNodeMember))
+                throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
+
+            OnChange();
         }
 
         private void Ignore(DestinationNode destinationNode)
@@ -300,7 +344,7 @@ namespace Air.Mapper.Internal
                 Ignore(childNode);
         }
 
-        private void Ignore(string[] destinationMembers)
+        private void ApplyIgnoreOption(string[] destinationMembers)
         {
             for (int d = 0; d < destinationMembers.Length; d++)
             {
@@ -366,48 +410,9 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private static bool CanMapEnumerableElement(Type source, Type destination) =>
-            (TypeInfo.IsBuiltIn(source) || !TypeInfo.IsEnumerable(source)) &&
-            (TypeInfo.IsBuiltIn(destination) || !TypeInfo.IsEnumerable(destination)) &&
-            (TypeInfo.IsBuiltIn(source) == TypeInfo.IsBuiltIn(destination));
-
-        private static bool IEnumerableParameterArgumentPredicate(Type argument) =>
-            argument.IsGenericType &&
-            argument.GetGenericTypeDefinition() == typeof(KeyValuePair<,>);
-
-        private static bool CanMapToKeyValuePairCollection(
-            Type sourceElementType,
-            Type destinationCollectionType)
-        {
-            System.Reflection.ConstructorInfo constructorInfo =
-                GetGenericIEnumerableParameterTypeConstructor(destinationCollectionType, IEnumerableParameterArgumentPredicate);
-
-            if (constructorInfo == null)
-                return false;
-
-            Type[] destinationArguments = GetIEnumerableArgument(constructorInfo.GetParameters()[0].ParameterType).GenericTypeArguments;
-
-            return CanMapEnumerableElement(sourceElementType.GetGenericArguments()[0], destinationArguments[0]) &&
-                CanMapEnumerableElement(sourceElementType.GetGenericArguments()[1], destinationArguments[1]);
-        }
-
-        private static bool CanMapToCollection(
-            Type sourceElementType,
-            Type destinationCollectionType)
-        {
-            if (destinationCollectionType.IsArray)
-                return CanMapEnumerableElement(sourceElementType, destinationCollectionType.GetElementType());
-
-            System.Reflection.ConstructorInfo constructorInfo =
-                GetGenericIEnumerableParameterTypeConstructor(destinationCollectionType);
-
-            if (constructorInfo == null)
-                return false;
-
-            Type destinationArgument = GetIEnumerableArgument(constructorInfo.GetParameters()[0].ParameterType);
-
-            return CanMapEnumerableElement(sourceElementType, destinationArgument);
-        }
+        private static bool CanMapArray(Type arrayType) =>
+            arrayType.GetArrayRank() == 1 &&
+            !arrayType.IsSZArray;
 
         private static bool CanMapCollection(
             Type sourceType,
@@ -417,7 +422,13 @@ namespace Air.Mapper.Internal
                 IsCollection(destinationType))
                 return false;
 
-            if (!CanMaintainCollection(destinationType))
+            if (sourceType.IsArray && !CanMapArray(sourceType))
+                return false;
+
+            if (destinationType.IsArray && !CanMapArray(destinationType))
+                return false;
+
+            if (!CanMaintainCollection(sourceType, destinationType))
                 return false;
 
             return CanMapTypes(
@@ -596,10 +607,10 @@ namespace Air.Mapper.Internal
         }
 
         private bool IsSourceNode(string memberName) =>
-            memberName == string.Empty || SourceNodes.Any(w => w.Name == memberName);
+            memberName == string.Empty || SourceNodes.Any(n => n.Name == memberName);
 
         private bool IsDestinationNode(string memberName) =>
-            memberName == string.Empty || DestinationNodes.Any(w => w.Name == memberName);
+            memberName == string.Empty || DestinationNodes.Any(n => n.Name == memberName);
 
         public IEnumerable<DestinationNodeMember> GetDestinationNodeMembers(DestinationNode destinationNode, Func<DestinationNodeMember, bool> predicate) =>
             destinationNode.Members.Where(predicate);
@@ -681,14 +692,13 @@ namespace Air.Mapper.Internal
                 destinationNode.ParentNode?.Name == node.Name &&
                 predicate(destinationNode));
 
-        public IEnumerable<DestinationNode> GetChildNodes(DestinationNode node) =>
-            DestinationNodes.Where(destinationNode =>
-                destinationNode.ParentNode?.Name == node.Name);
-
         public static IEnumerable<TypeNode> GetNodes(Type type, Func<MemberInfo, bool> predicate)
         {
             List<TypeNode> returnValue = new List<TypeNode>();
+
+            //List<TypeNode> nodes = TypeInfo.GetNodes(type, true, 0, 0, new Type[] { typeof(Type) }).ToList();
             List<TypeNode> nodes = TypeInfo.GetNodes(type, true).ToList();
+
             nodes.Sort((l, r) => l.Depth.CompareTo(r.Depth));
 
             for (int n = 0; n < nodes.Count; n++)

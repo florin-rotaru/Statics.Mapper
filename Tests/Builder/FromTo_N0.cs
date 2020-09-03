@@ -337,11 +337,11 @@ namespace Internal
         {
             // =======
             S[] source = NewSourceArray();
-            D[] destination = Mapper<S, D>.ToArray(source);
+            D[] destination = Mapper<S[], D[]>.Map(source);
             AssertEqualsOrDefault(source, destination, hasReadonlyMembers, hasStaticMembers);
 
             source = new S[] { };
-            destination = Mapper<S, D>.ToArray(source);
+            destination = Mapper<S[], D[]>.Map(source);
             Assert.Empty(destination);
         }
 

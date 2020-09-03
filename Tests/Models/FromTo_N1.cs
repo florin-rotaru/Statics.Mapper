@@ -241,8 +241,6 @@ namespace Internal
             var mapActionRef = Mapper<S, D>.CompileActionRef();
             var mapFunc = Mapper<S, D>.CompileFunc();
 
-            var il = Mapper<S, D>.ViewFuncIL();
-
             // =======
             S source = NewSource();
             D destination = new D();

@@ -12,6 +12,7 @@ using static Air.Compare.Members;
 
 namespace Playground
 {
+    [Collection(nameof(Playground))]
     public class IL
     {
         private readonly ITestOutputHelper Console;
@@ -43,7 +44,7 @@ namespace Playground
                 list.AddRange(new Fixture().Create<List<TC0_I0_Members>>());
 
             var source = list.ToArray();
-            var destination = Mapper<TC0_I0_Members, TC0_I0_Members>.ToArray(source);
+            var destination = Mapper<TC0_I0_Members[], TC0_I0_Members[]>.Map(source);
 
             int runs = 1;
             int actions = 25;
@@ -56,14 +57,14 @@ namespace Playground
 
                 stopwatch.Start();
                 for (int i = 0; i < actions; i++)
-                    destination = Mapper<TC0_I0_Members, TC0_I0_Members>.ToArray(source);
+                    destination = Mapper<TC0_I0_Members[], TC0_I0_Members[]>.Map(source);
 
                 stopwatch.Stop();
                 WriteLine("ToArray", stopwatch);
 
                 stopwatch.Restart();
                 for (int i = 0; i < actions; i++)
-                    destination = Mapper<TC0_I0_Members, TC0_I0_Members>.ToArray(source);
+                    destination = Mapper<TC0_I0_Members[], TC0_I0_Members[]>.Map(source);
 
                 stopwatch.Stop();
                 WriteLine("ToArray1", stopwatch);
@@ -171,9 +172,7 @@ namespace Playground
             var source = Fixture.Create<TClassArrayClassMembers>();
             var mapFunc = Mapper<TClassArrayClassMembers, TStructListNullableStructMembers>.CompileFunc();
             var destination = mapFunc(source);
-
-
-            var il = Mapper<TClassArrayClassMembers, TStructListNullableStructMembers>.ViewFuncIL();
+            Assert.True(CompareEquals(source, destination));
 
             var mapActionRef = Mapper<TClassArrayClassMembers, TStructListNullableStructMembers>.CompileActionRef();
             mapActionRef(source, ref destination);

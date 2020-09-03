@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -130,6 +129,8 @@ namespace Models
         public TC0_I0_Members M2 { get; set; }
     }
 
+    public class TC_List<T> { public List<T> N0 { get; set; } }
+
     public class TC1_I0_Array_Members { public TC0_I0_Members[] N0 { get; set; } }
     public class TC1_I1_HashSet_Members { public HashSet<TC0_I0_Members> N0 { get; set; } }
     public class TC1_I2_LinkedList_Members { public LinkedList<TC0_I0_Members> N0 { get; set; } }
@@ -166,12 +167,6 @@ namespace Models
     public struct TS1_I13_SortedList_Members { public SortedList<int, TC0_I0_Members> N0 { get; set; } }
     public struct TS1_I14_ConcurrentDictionary_Members { public ConcurrentDictionary<int, TC0_I0_Members> N0 { get; set; } }
     public struct TS1_I15_TDictionary_Members { public TDictionary<TC0_I0_Members> N0 { get; set; } }
-
-
-
-
-
-
 
     #region Collections
     public class TClassArrayClassMembers
@@ -263,40 +258,5 @@ namespace Models
     {
         public static SortedSet<TS0_I3_Static_Members?> Members { get; set; }
     }
-    #endregion
-
-
-
-
-    #region to be removed
-
-    public class TClassWrapper
-    {
-        public TC0_I0_Members Members { get; set; }
-        public TC0_I1_Nullable_Members NullableMembers { get; set; }
-
-        public TC0_I0_Members[] MembersArray { get; set; }
-        public List<TC0_I0_Members> MembersList { get; set; }
-        public Dictionary<Type, TC0_I0_Members> MembersTypeDictionary { get; set; }
-        public Dictionary<int, TC0_I0_Members> MembersIntDictionary { get; set; }
-        public Dictionary<int, TNode> RecursiveNodesDictionary { get; set; }
-    }
-
-    public struct TStructWrapper
-    {
-        public TClassWrapper ClassWrapper { get; set; }
-
-        public TC0_I0_Members[] MembersArray { get; set; }
-        public List<TC0_I0_Members> MembersList { get; set; }
-        public Dictionary<Type, TC0_I0_Members> MembersTypeDictionary { get; set; }
-        public Dictionary<int, TNode> RecursiveNodesDictionary { get; set; }
-        public Dictionary<int, TC0_I0_Members> MembersIntDictionary { get; set; }
-    }
-
-    public class TMisc
-    {
-        public TStructWrapper? StructWrapper { get; set; }
-    }
-
     #endregion
 }

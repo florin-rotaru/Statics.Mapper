@@ -1,5 +1,6 @@
 ﻿using AutoFixture;
 using BenchmarkDotNet.Attributes;
+using ExpressionDebugger;
 using Mapster;
 using Models;
 using System;
@@ -46,6 +47,39 @@ namespace Benchmark
             //    .ToScript(def);
 
         }
+
+
+        public int LoopArgumentMethod(TC0_I0_Members[] source)
+        {
+            int result = 0;
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] != null)
+                    result += 1;
+            }
+            return result;
+        }
+
+        [Benchmark]
+        public int LoopArgument() =>
+            LoopArgumentMethod(_sourceArray);
+
+        public int CopyLocalLoopArgumentMethod(TC0_I0_Members[] source)
+        {
+            var localSource = source;
+            int result = 0;
+            for (int i = 0; i < localSource.Length; i++)
+            {
+                if (localSource[i] != null)
+                    result += 1;
+            }
+            return result;
+        }
+
+        [Benchmark]
+        public int CopyLocalLoopArgument() =>
+            CopyLocalLoopArgumentMethod(_sourceArray);
+
 
         //[Benchmark]
         //public List<TC0_I0_Members> MapsterMapList() => _sourceList.Adapt<List<TC0_I0_Members>>();
@@ -185,6 +219,5 @@ namespace Benchmark
         //    return result;
 
         //}
-
     }
 }

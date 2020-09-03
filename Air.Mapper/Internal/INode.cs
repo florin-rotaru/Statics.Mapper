@@ -6,7 +6,7 @@ namespace Air.Mapper.Internal
 {
     internal interface INode
     {
-        string Name { get;  }
+        string Name { get; }
         int Depth { get; }
         Type Type { get; }
         Type NullableUnderlyingType { get; }

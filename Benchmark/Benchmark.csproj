@@ -7,14 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AgileObjects.AgileMapper" Version="1.7.0" />
+    <PackageReference Include="AgileObjects.AgileMapper" Version="1.7.1" />
     <PackageReference Include="AutoFixture" Version="4.13.0" />
     <PackageReference Include="AutoMapper" Version="10.0.0" />
     <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
     <PackageReference Include="EmitMapperCore" Version="1.0.1" />
     <PackageReference Include="ExpressionDebugger" Version="2.2.0" />
     <PackageReference Include="HolopaMir.ExpressMapper" Version="2.0.0" />
-    <PackageReference Include="Mapster" Version="6.1.1" />
+    <PackageReference Include="Mapster" Version="6.5.0" />
     <PackageReference Include="TinyMapper" Version="3.0.3" />
     <PackageReference Include="ValueInjecter" Version="3.2.0" />
   </ItemGroup>

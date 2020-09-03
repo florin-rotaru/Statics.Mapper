@@ -7,19 +7,6 @@ namespace Air.Mapper.Internal
 {
     internal partial class Compiler
     {
-        public Compiler(
-            Type sourceType,
-            Type destinationType,
-            MethodType methodType,
-            IEnumerable<IMapOption> mapOptions)
-        {
-            SourceType = sourceType;
-            DestinationType = destinationType;
-            MethodType = methodType;
-            MapOptions = mapOptions;
-        }
-
-        #region Locals
         private protected Type SourceType { get; set; }
         private protected Type DestinationType { get; set; }
         private protected MethodType MethodType { get; set; }
@@ -31,10 +18,20 @@ namespace Air.Mapper.Internal
         private const string Map = nameof(Map);
         private const string To = nameof(To);
         private const string ToArray = nameof(ToArray);
+        private const string CreateRange = nameof(CreateRange);
 
         private protected const string HasValue = nameof(HasValue);
         private protected const string Value = nameof(Value);
-        #endregion
+
+        public Compiler(
+            Type sourceType,
+            Type destinationType,
+            MethodType methodType)
+        {
+            SourceType = sourceType;
+            DestinationType = destinationType;
+            MethodType = methodType;
+        }
 
         private protected void CheckArguments()
         {
@@ -46,10 +43,10 @@ namespace Air.Mapper.Internal
 
         private protected void CreateSchema()
         {
-            if (Reflection.TypeInfo.IsBuiltIn(SourceType) && Reflection.TypeInfo.IsBuiltIn(DestinationType))
-                return;
-
-            if (DestinationType.IsAbstract || DestinationType.IsInterface)
+            if (Collections.IsCollection(DestinationType) ||
+                Reflection.TypeInfo.IsBuiltIn(DestinationType) ||
+                DestinationType.IsAbstract ||
+                DestinationType.IsInterface)
                 return;
 
             Schema = new Schema(SourceType, DestinationType, MapOptions);
@@ -146,10 +143,9 @@ namespace Air.Mapper.Internal
                 if (MethodType == MethodType.ActionRef)
                 {
                     if (destinationNode.NullableUnderlyingType != null ||
-                        destinationNode.IsKeyValuePair)
+                        destinationNode.TypeAdapter != null)
                         destinationNode.Local = IL.DeclareLocal(
-                            destinationNode.IsKeyValuePair ?
-                            destinationNode.Type :
+                            destinationNode.TypeAdapter ??
                             destinationNode.NullableUnderlyingType);
                 }
                 else
@@ -168,7 +164,12 @@ namespace Air.Mapper.Internal
         }
 
         private bool UseDestinationLocals() =>
-            !(Reflection.TypeInfo.IsBuiltIn(DestinationType) || DestinationType.IsAbstract || DestinationType.IsInterface);
+            !(
+                Collections.IsCollection(DestinationType) ||
+                Reflection.TypeInfo.IsBuiltIn(DestinationType) ||
+                DestinationType.IsAbstract ||
+                DestinationType.IsInterface
+            );
 
         private protected void DeclareLocals()
         {
@@ -196,12 +197,7 @@ namespace Air.Mapper.Internal
                 n.Type.IsValueType &&
                 n.Local != null &&
                 n.Depth != 0,
-                n =>
-                {
-                    IL.EmitInit(n.Local);
-                    //IL.EmitLdloca(n.Local.LocalIndex);
-                    //IL.EmitInit(n.Local.LocalType);
-                });
+                n => IL.EmitInit(n.Local));
         }
 
         #endregion
@@ -292,7 +288,7 @@ namespace Air.Mapper.Internal
                 if (MethodType == MethodType.ActionRef)
                 {
                     if (destinationNode.NullableUnderlyingType != null ||
-                        destinationNode.IsKeyValuePair)
+                        destinationNode.TypeAdapter != null)
                     {
                         IL.EmitLdloca(destinationNode.Local.LocalIndex);
                     }
@@ -407,10 +403,10 @@ namespace Air.Mapper.Internal
                 Load(destinationNode.ParentNode);
             }
 
-            if (destinationNode.IsKeyValuePair)
+            if (destinationNode.TypeAdapter != null)
             {
                 LoadLocal(destinationNode.Local, true);
-                IL.Emit(OpCodes.Call, destinationNode.Type.GetMethod(nameof(KeyValue<Type, Type>.ToKeyValuePair)));
+                IL.Emit(OpCodes.Call, destinationNode.TypeAdapter.GetMethod(TypeAdapters.ToMethodName(destinationNode.Type)));
             }
             else
             {
@@ -680,7 +676,7 @@ namespace Air.Mapper.Internal
                 {
                     IL.EmitLdarg(1);
                     IL.EmitInit(destinationNode.Type);
-                    IL.Emit(OpCodes.Stind_Ref);
+                    IL.EmitStore(destinationNode.Type);
                 }
                 else
                 {
