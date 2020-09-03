@@ -68,27 +68,22 @@ namespace Benchmark
             ExpressMapper.Mapper.Register<Account, AccountDto>();
         }
 
-        //[Benchmark]
-        //public AccountDto ExpressMapperMap() => ExpressMapper.Mapper.Map<Account, AccountDto>(_source);
-
-        //[Benchmark]
-        //public AccountDto AgileMapperMap() => AgileObjects.AgileMapper.Mapper.Map(_source).ToANew<AccountDto>();
-
-        //[Benchmark]
-        //public AccountDto TinyMapperMap() => Nelibur.ObjectMapper.TinyMapper.Map<AccountDto>(_source);
-
-        //[Benchmark]
-        //public AccountDto AutoMapperMap() => _autoMapper.Map<AccountDto>(_source);
-
+        [Benchmark]
+        public AccountDto ExpressMapperMap() => ExpressMapper.Mapper.Map<Account, AccountDto>(_source);
 
         [Benchmark]
-        public AccountDto MapsterMap1() => _source.Adapt<AccountDto>();
-        //[Benchmark]
-        //public AccountDto MapsterMap2() => _source.Adapt<AccountDto>();
+        public AccountDto AgileMapperMap() => AgileObjects.AgileMapper.Mapper.Map(_source).ToANew<AccountDto>();
 
         [Benchmark]
-        public AccountDto AirMapperMap1() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
-        //[Benchmark]
-        //public AccountDto AirMapperMap2() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
+        public AccountDto TinyMapperMap() => Nelibur.ObjectMapper.TinyMapper.Map<AccountDto>(_source);
+
+        [Benchmark]
+        public AccountDto AutoMapperMap() => _autoMapper.Map<AccountDto>(_source);
+
+        [Benchmark]
+        public AccountDto MapsterMap() => _source.Adapt<AccountDto>();
+
+        [Benchmark]
+        public AccountDto AirMapperMap() => Air.Mapper.Mapper<Account, AccountDto>.Map(_source);
     }
 }

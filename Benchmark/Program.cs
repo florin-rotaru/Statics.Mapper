@@ -13,9 +13,9 @@ namespace Benchmark
     {
         private static void Main(string[] args)
         {
-            BenchmarkRunner.Run<Collections>();
+            //BenchmarkRunner.Run<Collections>();
 
-            //BenchmarkRunner.Run<From_Account_To_AccountDto>();
+            BenchmarkRunner.Run<From_Account_To_AccountDto>();
 
             //BenchmarkRunner.Run<EnumToString>();
             //BenchmarkRunner.Run<Immutables>();
@@ -24,27 +24,27 @@ namespace Benchmark
 
             //BenchmarkRunner.Run<CollectionsToArray>();
 
-            //BenchmarkRunner.Run<From_TC0_Members_To_TC0_I0_Members>();
-            //BenchmarkRunner.Run<From_TC0_Members_To_TC0_I1_Members>();
-            //BenchmarkRunner.Run<From_TC0_Members_To_TC0_I2_Nullable_Members>();
+            BenchmarkRunner.Run<From_TC0_Members_To_TC0_I0_Members>();
+            BenchmarkRunner.Run<From_TC0_Members_To_TC0_I1_Members>();
+            BenchmarkRunner.Run<From_TC0_Members_To_TC0_I2_Nullable_Members>();
 
-            //BenchmarkRunner.Run<From_TC0_Members_To_TS0_I0_Members>();
-            //BenchmarkRunner.Run<From_TC0_Members_To_TS0_I1_Members>();
-            //BenchmarkRunner.Run<From_TC0_Members_To_TS0_I2_Nullable_Members>();
+            BenchmarkRunner.Run<From_TC0_Members_To_TS0_I0_Members>();
+            BenchmarkRunner.Run<From_TC0_Members_To_TS0_I1_Members>();
+            BenchmarkRunner.Run<From_TC0_Members_To_TS0_I2_Nullable_Members>();
 
-            //BenchmarkRunner.Run<From_TS0_Members_To_TC0_I0_Members>();
-            //BenchmarkRunner.Run<From_TS0_Members_To_TC0_I1_Members>();
-            //BenchmarkRunner.Run<From_TS0_Members_To_TC0_I2_Nullable_Members>();
+            BenchmarkRunner.Run<From_TS0_Members_To_TC0_I0_Members>();
+            BenchmarkRunner.Run<From_TS0_Members_To_TC0_I1_Members>();
+            BenchmarkRunner.Run<From_TS0_Members_To_TC0_I2_Nullable_Members>();
 
-            //BenchmarkRunner.Run<From_TS0_Members_To_TS0_I0_Members>();
-            //BenchmarkRunner.Run<From_TS0_Members_To_TS0_I1_Members>();
-            //BenchmarkRunner.Run<From_TS0_Members_To_TS0_I2_Nullable_Members>();
+            BenchmarkRunner.Run<From_TS0_Members_To_TS0_I0_Members>();
+            BenchmarkRunner.Run<From_TS0_Members_To_TS0_I1_Members>();
+            BenchmarkRunner.Run<From_TS0_Members_To_TS0_I2_Nullable_Members>();
 
-            //BenchmarkRunner.Run<From_TC1_To_TC1_0>();
-            //BenchmarkRunner.Run<From_TC1_To_TS1_0>();
+            BenchmarkRunner.Run<From_TC1_To_TC1_0>();
+            BenchmarkRunner.Run<From_TC1_To_TS1_0>();
 
-            //BenchmarkRunner.Run<From_TS1_To_TC1_0>();
-            //BenchmarkRunner.Run<From_TS1_To_TS1_0>();
+            BenchmarkRunner.Run<From_TS1_To_TC1_0>();
+            BenchmarkRunner.Run<From_TS1_To_TS1_0>();
 
 
             //RunBenchmark();
@@ -65,12 +65,9 @@ namespace Benchmark
             for (int i = 0; i < entries; i++)
                 source.Add(new Fixture().Create<TC0_I0_Members>());
 
-            var destination = new TC0_I0_Members[entries];
-
-
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            destination = source.Adapt<TC0_I0_Members[]>();
+            var destination = source.Adapt<TC0_I0_Members[]>();
             stopwatch.Stop();
             WriteLine("MapsterAdapt", stopwatch);
 

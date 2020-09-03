@@ -21,7 +21,6 @@ namespace Playground
             Fixture = new Fixture();
         }
 
-
         [Fact]
         public void MultidimensionalArray()
         {
