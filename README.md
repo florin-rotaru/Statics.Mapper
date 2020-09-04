@@ -9,7 +9,7 @@ Is a simple and fast open source mapping library which allows to map one type me
 
 You can install it via [package manager console](https://docs.microsoft.com/en-us/nuget/consume-packages/install-use-packages-powershell)
 ```
-PM> Install-Package Mapster
+PM> Install-Package Air.Mapper
 ```
 
 ## Basic usage
@@ -60,13 +60,13 @@ Intel Core i7-6820HQ CPU 2.70GHz (Skylake), 1 CPU, 8 logical and 4 physical core
 Job=InProcess  Toolchain=InProcessEmitToolchain  
 
 ```
-|           Method |       Mean |    Error |   StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|----------------- |-----------:|---------:|---------:|-------:|------:|------:|----------:|
-| ExpressMapperMap | 2,145.4 ns | 42.41 ns | 39.67 ns | 0.9499 |     - |     - |   3.89 KB |
-|   AgileMapperMap | 1,114.7 ns | 22.20 ns | 21.80 ns | 0.8221 |     - |     - |   3.36 KB |
-|    TinyMapperMap | 4,000.0 ns | 10.79 ns | 10.09 ns | 0.8240 |     - |     - |   3.38 KB |
-|    AutoMapperMap | 2,320.4 ns |  9.46 ns |  8.85 ns | 0.7706 |     - |     - |   3.15 KB |
-|       MapsterMap |   813.6 ns | 11.51 ns | 10.77 ns | 0.7362 |     - |     - |   3.01 KB |
-|     AirMapperMap |   760.3 ns | 10.18 ns |  9.52 ns | 0.7362 |     - |     - |   3.01 KB |
+|           Method |       Mean |    Error |   StdDev |     Median |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|----------------- |-----------:|---------:|---------:|-----------:|-------:|------:|------:|----------:|
+| ExpressMapperMap | 2,017.8 ns | 37.52 ns | 60.58 ns | 2,011.7 ns | 0.9499 |     - |     - |   3.89 KB |
+|   AgileMapperMap | 1,019.0 ns | 22.21 ns | 63.01 ns |   992.2 ns | 0.8221 |     - |     - |   3.36 KB |
+|    TinyMapperMap | 3,895.7 ns | 52.91 ns | 46.91 ns | 3,905.7 ns | 0.8240 |     - |     - |   3.38 KB |
+|    AutoMapperMap | 2,311.8 ns | 38.76 ns | 36.26 ns | 2,330.7 ns | 0.7706 |     - |     - |   3.15 KB |
+|       MapsterMap |   723.3 ns | 12.46 ns | 11.66 ns |   728.9 ns | 0.7362 |     - |     - |   3.01 KB |
+|     AirMapperMap |   673.2 ns |  8.56 ns |  8.01 ns |   673.0 ns | 0.7362 |     - |     - |   3.01 KB |
 
 More [benchmark results](https://github.com/florin-rotaru/Air.Mapper/tree/master/Benchmark/BenchmarkResults/20200904)
