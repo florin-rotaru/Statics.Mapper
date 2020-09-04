@@ -49,7 +49,7 @@ MapperConfig<TSource, TDestination>.SetOptions(o => o
   .Map(s => s.SourceMember, d => d.DestinationMember));
 ```
 
-## Build with performance in mind 
+## Built with performance in mind 
 ``` ini
 
 BenchmarkDotNet=v0.12.1, OS=Windows 10.0.18363.1016 (1909/November2018Update/19H2)
