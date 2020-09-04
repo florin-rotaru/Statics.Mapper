@@ -69,4 +69,4 @@ Job=InProcess  Toolchain=InProcessEmitToolchain
 |       MapsterMap |   723.3 ns | 12.46 ns | 11.66 ns |   728.9 ns | 0.7362 |     - |     - |   3.01 KB |
 |     AirMapperMap |   673.2 ns |  8.56 ns |  8.01 ns |   673.0 ns | 0.7362 |     - |     - |   3.01 KB |
 
-More [benchmark results](https://github.com/florin-rotaru/Air.Mapper/tree/master/Benchmark/BenchmarkResults/20200904)
+More [benchmark results](https://github.com/florin-rotaru/Air.Mapper/tree/master/Benchmark/BenchmarkResults/v3.1.0-2020.09.04)
