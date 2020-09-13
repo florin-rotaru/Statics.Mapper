@@ -49,6 +49,17 @@ MapperConfig<TSource, TDestination>.SetOptions(o => o
   .Map(s => s.SourceMember, d => d.DestinationMember));
 ```
 
+### Default Map Options
+- bool expand = true
+- bool useMapperConfig = true
+
+#### Expand Option
+When **true** maps all members and node members  
+When **false** node members map will be skipped 
+
+#### UseMapperConfig
+When **true** MapperConfig options are applied
+
 ## Built with performance in mind 
 ``` ini
 
