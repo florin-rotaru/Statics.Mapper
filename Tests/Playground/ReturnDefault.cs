@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Playground
 {
-    [Collection(nameof(Playground))]
+    [Collection(nameof(ReturnDefault))]
     public class ReturnDefault
     {
         [Fact]

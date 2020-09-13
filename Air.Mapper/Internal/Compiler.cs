@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 
 namespace Air.Mapper.Internal
@@ -56,10 +57,18 @@ namespace Air.Mapper.Internal
         {
             List<SourceNode> returnValue = new List<SourceNode>();
 
-            foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
-                if (destinationNodeMember.Map &&
-                    !returnValue.Exists(node => node.Name == destinationNodeMember.SourceNode.Name))
-                    returnValue.Add(destinationNodeMember.SourceNode);
+            if (destinationNode.UseMapper)
+            {
+                if (destinationNode.SourceNode.Depth != 0)
+                    returnValue.Add(destinationNode.SourceNode.ParentNode);
+            }
+            else
+            {
+                foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
+                    if (destinationNodeMember.Map &&
+                        !returnValue.Exists(node => node.Name == destinationNodeMember.SourceNode.Name))
+                        returnValue.Add(destinationNodeMember.SourceNode);
+            }
 
             for (int i = 0; i < returnValue.Count; i++)
             {
@@ -128,12 +137,19 @@ namespace Air.Mapper.Internal
 
             if (destinationNode.Depth != 0)
             {
-                if (destinationNode.NullableUnderlyingType != null)
+                if (MethodType == MethodType.Function && destinationNode.UseMapper) { }
+                else if (destinationNode.NullableUnderlyingType != null)
                 {
                     destinationNode.NullableLocal = IL.DeclareLocal(destinationNode.Type);
-                    destinationNode.Local = IL.DeclareLocal(destinationNode.NullableUnderlyingType);
+                    
+                    if (!destinationNode.UseMapper)
+                        destinationNode.Local = IL.DeclareLocal(destinationNode.NullableUnderlyingType);
                 }
                 else if (destinationNode.Type.IsValueType)
+                {
+                    destinationNode.Local = IL.DeclareLocal(destinationNode.Type);
+                }
+                else if (destinationNode.UseMapper)
                 {
                     destinationNode.Local = IL.DeclareLocal(destinationNode.Type);
                 }
@@ -195,6 +211,7 @@ namespace Air.Mapper.Internal
             Schema.ForEachDestinationNode(n =>
                 n.Load &&
                 n.Type.IsValueType &&
+                !n.UseMapper &&
                 n.Local != null &&
                 n.Depth != 0,
                 n => IL.EmitInit(n.Local));
@@ -390,6 +407,12 @@ namespace Air.Mapper.Internal
                 !destinationNode.Type.IsValueType)
                 return;
 
+            if (destinationNode.UseMapper && MethodType == MethodType.Function)
+            {
+                IL.EmitSetMemberValue(destinationNode.MemberInfo);
+                return;
+            }
+
             if (destinationNode.IsStatic) { }
             else if (destinationNode.ParentNode.Type.IsValueType)
             {
@@ -403,7 +426,14 @@ namespace Air.Mapper.Internal
                 Load(destinationNode.ParentNode);
             }
 
-            if (destinationNode.TypeAdapter != null)
+            if (destinationNode.UseMapper)
+            {
+                if (destinationNode.NullableUnderlyingType != null)
+                    LoadLocal(destinationNode.NullableLocal, false);
+                else
+                    LoadLocal(destinationNode.Local, false);
+            }
+            else if (destinationNode.TypeAdapter != null)
             {
                 LoadLocal(destinationNode.Local, true);
                 IL.Emit(OpCodes.Call, destinationNode.TypeAdapter.GetMethod(TypeAdapters.ToMethodName(destinationNode.Type)));
@@ -413,7 +443,7 @@ namespace Air.Mapper.Internal
                 LoadLocal(destinationNode.Local, false);
             }
 
-            if (destinationNode.NullableUnderlyingType != null)
+            if (destinationNode.NullableUnderlyingType != null && !destinationNode.UseMapper)
                 IL.Emit(OpCodes.Newobj, destinationNode.Type.GetConstructor(new Type[] { destinationNode.NullableUnderlyingType }));
 
             IL.EmitSetMemberValue(destinationNode.MemberInfo);
@@ -515,12 +545,16 @@ namespace Air.Mapper.Internal
 
             return Schema.DestinationNodes.Any(n =>
                 n.Load &&
-                n.MembersMapCount != 0 && n.Members.Any(m => m.Map &&
-                    (
-                        m.SourceNode.Name == sourceNode.Name ||
-                        childNodes.Exists(c => c.Name == m.SourceNode.Name)
-                    ))
-                );
+                (
+                    (n.MembersMapCount != 0 && n.Members.Any(
+                        m => m.Map &&
+                        (
+                            m.SourceNode.Name == sourceNode.Name ||
+                            childNodes.Exists(c => c.Name == m.SourceNode.Name)
+                        ))
+                    ) ||
+                    (n.UseMapper && childNodes.Exists(c => c.Name == n.SourceNode.Name))
+                ));
         }
 
         private protected bool StructRequired(SourceNode sourceNode)
@@ -590,11 +624,24 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private void MapSourceChildNodes(SourceNode sourceNode)
+        private void MapSourceChildNodes(SourceNode sourceNode, ref List<DestinationNode> destinationNodes)
         {
             IEnumerable<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 1);
             foreach (SourceNode childNode in childNodes)
+            {
+                List<DestinationNode> mapperMapDestinationNodes =
+                    Schema.DestinationNodes.Where(n => n.UseMapper && n.SourceNode.Name == childNode.Name).ToList();
+
+                for (int d = 0; d < mapperMapDestinationNodes.Count; d++)
+                {
+                    MapperMap(mapperMapDestinationNodes[d]);
+
+                    if (!destinationNodes.Exists(n => n.Name == mapperMapDestinationNodes[d].ParentNode.Name))
+                        destinationNodes.Add(mapperMapDestinationNodes[d].ParentNode);
+                }
+
                 MapSourceNodes(childNode);
+            }
         }
 
         private void MapSourceNode(SourceNode sourceNode)
@@ -618,7 +665,7 @@ namespace Air.Mapper.Internal
                     }
                 });
 
-            MapSourceChildNodes(sourceNode);
+            MapSourceChildNodes(sourceNode, ref destinationNodes);
             SetDestinationNodes(destinationNodes);
         }
 
@@ -857,5 +904,74 @@ namespace Air.Mapper.Internal
 
             destinationNode.Loaded = true;
         }
+
+        private void MapperMapFunc(DestinationNode destinationNode)
+        {
+            SourceNode sourceNode = destinationNode.SourceNode;
+            EnsureDestinationNodePath(destinationNode, sourceNode);
+
+            MethodInfo method = typeof(Mapper<,>).MakeGenericType(new[] { sourceNode.Type, destinationNode.Type })
+                .GetMethods(BindingFlags.Public | BindingFlags.Static).First(m =>
+                    m.Name == nameof(Mapper<Type, Type>.Map) &&
+                    !m.IsGenericMethod &&
+                    m.ReturnType == destinationNode.Type &&
+                    m.GetParameters().Length == 1 &&
+                    m.GetParameters()[0].ParameterType == sourceNode.Type);
+
+            if (!destinationNode.IsStatic)
+                Load(destinationNode.ParentNode);
+
+            if (destinationNode.Type.IsValueType)
+            {
+                Load(sourceNode.ParentNode, sourceNode.MemberInfo);
+                IL.Emit(OpCodes.Call, method);
+            }
+            else
+            {
+                Load(sourceNode.ParentNode, sourceNode.MemberInfo);
+                IL.Emit(OpCodes.Call, method);
+                IL.EmitSetMemberValue(destinationNode.MemberInfo);
+            }
+
+            SetDestinationNode(destinationNode);
+        }
+
+        private void MapperMapActionRef(DestinationNode destinationNode)
+        {
+            SourceNode sourceNode = destinationNode.SourceNode;
+            EnsureDestinationNodePath(destinationNode, sourceNode);
+
+            MethodInfo method = typeof(Mapper<,>).MakeGenericType(new[] { sourceNode.Type, destinationNode.Type })
+                .GetMethods(BindingFlags.Public | BindingFlags.Static).First(m =>
+                    m.Name == nameof(Mapper<Type, Type>.Map) &&
+                    !m.IsGenericMethod &&
+                    m.ReturnType == typeof(void) &&
+                    m.GetParameters().Length == 2 &&
+                    m.GetParameters()[0].ParameterType == sourceNode.Type &&
+                    m.GetParameters()[1].ParameterType == destinationNode.Type.MakeByRefType());
+
+            if (!destinationNode.IsStatic)
+                Load(destinationNode.ParentNode);
+            IL.EmitLoadMemberValue(destinationNode.MemberInfo);
+            IL.EmitStloc(destinationNode.NullableLocal != null ? destinationNode.NullableLocal.LocalIndex : destinationNode.Local.LocalIndex);
+
+            Load(sourceNode.ParentNode, sourceNode.MemberInfo);
+            LoadLocal(destinationNode.NullableLocal ?? destinationNode.Local, true);
+            IL.Emit(OpCodes.Call, method);
+
+            if (!destinationNode.IsStatic)
+                Load(destinationNode.ParentNode);
+            LoadLocal(destinationNode.NullableLocal ?? destinationNode.Local, false);
+            IL.EmitSetMemberValue(destinationNode.MemberInfo);
+        }
+
+        private void MapperMap(DestinationNode destinationNode)
+        {
+            if (MethodType == MethodType.Function)
+                MapperMapFunc(destinationNode);
+            else
+                MapperMapActionRef(destinationNode);
+        }
+
     }
 }
