@@ -12,7 +12,7 @@ using static Air.Compare.Members;
 
 namespace Playground
 {
-    [Collection(nameof(Playground))]
+    [Collection(nameof(IL))]
     public class IL
     {
         private readonly ITestOutputHelper Console;

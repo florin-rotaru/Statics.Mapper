@@ -11,7 +11,7 @@ using static Air.Compare.Members;
 
 namespace Playground
 {
-    [Collection(nameof(Playground))]
+    [Collection(nameof(Types))]
     public class Types
     {
         private readonly ITestOutputHelper Console;

@@ -11,7 +11,7 @@ using static Air.Compare.Members;
 
 namespace Playground
 {
-    [Collection(nameof(Playground))]
+    [Collection(nameof(Collections))]
     public class Collections
     {
         private Fixture Fixture { get; }

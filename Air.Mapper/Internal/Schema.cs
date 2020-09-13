@@ -189,10 +189,40 @@ namespace Air.Mapper.Internal
             ApplyMapOption(mapOption.SourceMemberName, mapOption.DestinationMemberName, mapOption.Expand, mapOption.UseMapperConfig);
         }
 
+        private bool UseMapperMap(SourceNode sourceNode, DestinationNode destinationNode) =>
+            (bool)typeof(MapperConfig<,>)
+                .MakeGenericType(new Type[] { sourceNode.Type, destinationNode.Type })
+                .GetProperties(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                .First(p => p.Name == nameof(MapperConfig <Type, Type>.UsePredefinedMap))
+                .GetValue(null, null);
+
+        private void SetUseMapper(DestinationNode destinationNode, bool value)
+        {
+            foreach (DestinationNode parentNode in destinationNode.ParentNodes)
+                parentNode.UseMapper = false;
+
+            destinationNode.UseMapper = value;
+        }
+
+        private void MapperMap(SourceNode sourceNode, DestinationNode destinationNode)
+        {
+            LoadDestinationNodePath(destinationNode);
+            destinationNode.SourceNode = sourceNode;
+            SetUseMapper(destinationNode, true);
+        }
+
         private void Map(SourceNode sourceNode, DestinationNode destinationNode, bool expand, bool useMapperConfig)
         {
             if (!EvaluateMap(sourceNode, destinationNode))
                 return;
+
+            if (useMapperConfig && UseMapperMap(sourceNode, destinationNode))
+            {
+                MapperMap(sourceNode, destinationNode);
+                return;
+            }
+
+            SetUseMapper(destinationNode, false);
 
             List<IMapOption> options = null;
             bool withRootOption = false;
@@ -330,6 +360,7 @@ namespace Air.Mapper.Internal
                 destinationNodeMember))
                 throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
 
+            SetUseMapper(destinationNode, false);
             OnChange();
         }
 
@@ -341,6 +372,10 @@ namespace Air.Mapper.Internal
                 destinationNodeMember.Map = false;
 
             IEnumerable<DestinationNode> childNodes = GetChildNodes(destinationNode, childNode => childNode.Load);
+
+            if (!childNodes.Any())
+                SetUseMapper(destinationNode, false);
+
             foreach (DestinationNode childNode in childNodes)
                 Ignore(childNode);
         }
@@ -365,6 +400,8 @@ namespace Air.Mapper.Internal
                 if (member == null) continue;
 
                 member.Map = false;
+
+                SetUseMapper(node, false);
             }
 
             OnChange();
@@ -503,12 +540,19 @@ namespace Air.Mapper.Internal
                 destinationNode.MembersMapCount =
                    destinationNode.Members.Count(n => n.Map && n.Status == Status.Successful);
 
-                foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
+                if (destinationNode.UseMapper)
                 {
-                    if (destinationNodeMember.Status != Status.Successful)
-                        continue;
+                    LoadSourceNodePath(destinationNode.SourceNode);
+                }
+                else
+                {
+                    foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
+                    {
+                        if (destinationNodeMember.Status != Status.Successful)
+                            continue;
 
-                    LoadSourceNodePath(destinationNodeMember.SourceNode);
+                        LoadSourceNodePath(destinationNodeMember.SourceNode);
+                    }
                 }
             }
         }
@@ -692,10 +736,7 @@ namespace Air.Mapper.Internal
         public static IEnumerable<TypeNode> GetNodes(Type type, Func<MemberInfo, bool> predicate)
         {
             List<TypeNode> returnValue = new List<TypeNode>();
-
-            //List<TypeNode> nodes = TypeInfo.GetNodes(type, true, 0, 0, new Type[] { typeof(Type) }).ToList();
             List<TypeNode> nodes = TypeInfo.GetNodes(type, true).ToList();
-
             nodes.Sort((l, r) => l.Depth.CompareTo(r.Depth));
 
             for (int n = 0; n < nodes.Count; n++)
