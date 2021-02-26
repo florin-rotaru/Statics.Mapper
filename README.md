@@ -73,22 +73,18 @@ Job=InProcess  Toolchain=InProcessEmitToolchain
 ```
 |           Method |       Mean |     Error |    StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 |----------------- |-----------:|----------:|----------:|-------:|------:|------:|----------:|
-| ExpressMapperMap | 2,019.3 ns |  11.62 ns |   9.08 ns | 0.9499 |     - |     - |    3985 B |
-|   AgileMapperMap |   992.3 ns |  18.30 ns |  21.78 ns | 0.8221 |     - |     - |    3441 B |
-|    TinyMapperMap | 3,824.6 ns |  73.86 ns |  57.66 ns | 0.8240 |     - |     - |    3465 B |
-|    AutoMapperMap | 2,161.0 ns |  27.41 ns |  25.64 ns | 0.7706 |     - |     - |    3225 B |
-|       MapsterMap |   723.7 ns |   9.69 ns |   9.06 ns | 0.7362 |     - |     - |    3080 B |
-|     AirMapperMap |   655.9 ns |  12.61 ns |  18.49 ns | 0.7362 |     - |     - |    3080 B |
-| HigLaboMapperMap |   527.8 ns |  10.05 ns |   9.40 ns | 0.3977 |     - |     - |    1664 B |
-|    FastMapperMap | 5,553.0 ns | 112.82 ns |  88.08 ns | 1.9608 |     - |     - |    8208 B |
-| ValueInjecterMap | 4,914.3 ns |  93.43 ns | 107.59 ns | 0.1984 |     - |     - |     840 B |
-|   PowerMapperMap |   109.2 ns |   2.11 ns |   1.98 ns | 0.0324 |     - |     - |     136 B |
-|    SafeMapperMap | 1,235.2 ns |  16.33 ns |  13.64 ns | 0.9174 |     - |     - |    3840 B |
-
-*in the above results the **HigLaboMapperMap, PowerMapperMap** missed some member mappings*
+| ExpressMapperMap | 2,263.7 ns |  45.18 ns |  57.14 ns | 0.9499 |     - |     - |    3985 B |
+|   AgileMapperMap | 1,047.8 ns |   5.91 ns |   5.53 ns | 0.8221 |     - |     - |    3441 B |
+|    TinyMapperMap | 3,977.6 ns |  13.73 ns |  12.85 ns | 0.8240 |     - |     - |    3465 B |
+|    AutoMapperMap | 2,178.8 ns |  23.08 ns |  20.46 ns | 0.7706 |     - |     - |    3225 B |
+|       MapsterMap |   736.0 ns |   8.18 ns |   7.65 ns | 0.7362 |     - |     - |    3080 B |
+|     AirMapperMap |   668.6 ns |   3.00 ns |   2.66 ns | 0.7362 |     - |     - |    3080 B |
+|    FastMapperMap | 5,666.5 ns | 103.45 ns | 127.05 ns | 1.9608 |     - |     - |    8218 B |
+| ValueInjecterMap | 4,784.0 ns |  17.14 ns |  15.19 ns | 0.1984 |     - |     - |     840 B |
+|    SafeMapperMap | 1,276.1 ns |  16.25 ns |  13.57 ns | 0.9174 |     - |     - |    3840 B |
 
 ### More benchmark results
-https://github.com/florin-rotaru/NetMappers.Benchmarks/tree/master/NetMappers.Benchmarks/BenchmarksResults/2020.09.18
+https://github.com/florin-rotaru/NetMappers.Benchmarks/tree/master/NetMappers.Benchmarks/BenchmarksResults/2021.02.25
 
 ### Benchmark results summary
 |Library             |Passed                  |Failed                  
@@ -107,5 +103,5 @@ https://github.com/florin-rotaru/NetMappers.Benchmarks/tree/master/NetMappers.Be
 
 - passed: no exception thrown nor differences between source and destination members
 - failed: exception thrown or differences found between source and destination members
-  - [exceptions](https://github.com/florin-rotaru/NetMappers.Benchmarks/blob/master/NetMappers.Benchmarks/BenchmarksResults/2020.09.18/Failed.Exceptions.md)
-  - [diffs](https://github.com/florin-rotaru/NetMappers.Benchmarks/blob/master/NetMappers.Benchmarks/BenchmarksResults/2020.09.18/Failed.Diffs.md)
+  - [exceptions](https://github.com/florin-rotaru/NetMappers.Benchmarks/blob/master/NetMappers.Benchmarks/BenchmarksResults/2021.02.25/Failed.Exceptions.md)
+  - [diffs](https://github.com/florin-rotaru/NetMappers.Benchmarks/blob/master/NetMappers.Benchmarks/BenchmarksResults/2021.02.25/Failed.Diffs.md)
