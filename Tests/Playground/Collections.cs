@@ -1004,7 +1004,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_IProducerConsumerCollection() 
+        public void Array_To_IProducerConsumerCollection()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1022,7 +1022,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ICollection() 
+        public void Array_To_ICollection()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1038,7 +1038,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_List() 
+        public void Array_To_List()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1054,7 +1054,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_Dictionary() 
+        public void Array_To_Dictionary()
         {
             var source = Fixture.Create<KeyValuePair<int, TC0_I0_Members>[]>();
             Assert.NotEmpty(source);
@@ -1070,7 +1070,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_HashSet() 
+        public void Array_To_HashSet()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1086,7 +1086,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_LinkedList() 
+        public void Array_To_LinkedList()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1102,7 +1102,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_Queue() 
+        public void Array_To_Queue()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1118,7 +1118,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_SortedDictionary() 
+        public void Array_To_SortedDictionary()
         {
             var source = Fixture.Create<KeyValuePair<int, TC0_I0_Members>[]>();
             Assert.NotEmpty(source);
@@ -1136,7 +1136,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_SortedList() 
+        public void Array_To_SortedList()
         {
             var source = Fixture.Create<KeyValuePair<int, TC0_I0_Members>[]>();
             Assert.NotEmpty(source);
@@ -1154,7 +1154,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_SortedSet() 
+        public void Array_To_SortedSet()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1172,7 +1172,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_Stack() 
+        public void Array_To_Stack()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1190,7 +1190,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_BlockingCollection() 
+        public void Array_To_BlockingCollection()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1206,7 +1206,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ConcurrentBag() 
+        public void Array_To_ConcurrentBag()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1224,7 +1224,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ConcurrentDictionary() 
+        public void Array_To_ConcurrentDictionary()
         {
             var source = Fixture.Create<KeyValuePair<int, TC0_I0_Members>[]>();
             Assert.NotEmpty(source);
@@ -1244,7 +1244,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ConcurrentQueue() 
+        public void Array_To_ConcurrentQueue()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1260,7 +1260,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ConcurrentStack() 
+        public void Array_To_ConcurrentStack()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1278,7 +1278,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ImmutableArray() 
+        public void Array_To_ImmutableArray()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1294,7 +1294,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ImmutableDictionary() 
+        public void Array_To_ImmutableDictionary()
         {
             var source = Fixture.Create<KeyValuePair<int, TC0_I0_Members>[]>();
             Assert.NotEmpty(source);
@@ -1314,7 +1314,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ImmutableHashSet() 
+        public void Array_To_ImmutableHashSet()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1334,7 +1334,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ImmutableList() 
+        public void Array_To_ImmutableList()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1350,7 +1350,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ImmutableQueue() 
+        public void Array_To_ImmutableQueue()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1366,7 +1366,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ImmutableSortedDictionary() 
+        public void Array_To_ImmutableSortedDictionary()
         {
             var source = Fixture.Create<KeyValuePair<int, TC0_I0_Members>[]>();
             Assert.NotEmpty(source);
@@ -1384,7 +1384,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ImmutableSortedSet() 
+        public void Array_To_ImmutableSortedSet()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);
@@ -1400,7 +1400,7 @@ namespace Playground
         }
 
         [Fact]
-        public void Array_To_ImmutableStack() 
+        public void Array_To_ImmutableStack()
         {
             var source = Fixture.Create<TC0_I0_Members[]>();
             Assert.NotEmpty(source);

@@ -7,7 +7,7 @@ namespace Air.Mapper
     public static partial class Mapper<S, D>
     {
         public delegate void ActionRef(S source, ref D destination);
-        
+
         private static IEnumerable<IMapOption> ParseMapOptions(Action<MapOptions<S, D>> mapOptions = null)
         {
             MapOptions<S, D> options = new MapOptions<S, D>();
@@ -26,7 +26,7 @@ namespace Air.Mapper
               .Compile(mapOptions)
               .CreateDelegate(typeof(ActionRef));
 
-        public static Func<S, D> CompiledFunc { get; internal set; } = 
+        public static Func<S, D> CompiledFunc { get; internal set; } =
             !MapperConfig<S, D>.UsePredefinedMap ? CompilerCompileFunc(MapperConfig<S, D>.GetOptions()) : MapperConfig<S, D>.DefaultFunc;
         public static ActionRef CompiledActionRef { get; internal set; } =
             !MapperConfig<S, D>.UsePredefinedMap ? CompilerCompileActionRef(MapperConfig<S, D>.GetOptions()) : MapperConfig<S, D>.DefaultActionRef;
@@ -40,7 +40,7 @@ namespace Air.Mapper
         /// <returns></returns>
         public static Func<S, D> CompileFunc(Action<MapOptions<S, D>> mapOptions = null) =>
             CompilerCompileFunc(ParseMapOptions(mapOptions));
-        
+
         /// <summary>
         /// Compiles map ActionRef
         /// </summary>

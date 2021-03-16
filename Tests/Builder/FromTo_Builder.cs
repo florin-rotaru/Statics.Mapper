@@ -77,49 +77,49 @@ namespace Builder
           })
         };
 
-        string IsNullable(bool nullable, string result) =>
+        static string IsNullable(bool nullable, string result) =>
             nullable ? result : string.Empty;
 
-        string Lower(object text) =>
+        static string Lower(object text) =>
             text.ToString().ToLower();
 
-        string Capitalize(string text) =>
-            char.ToUpper(text[0]) + text.Substring(1);
+        static string Capitalize(string text) =>
+            char.ToUpper(text[0]) + text[1..];
 
-        string Tabs(int n) =>
+        static string Tabs(int n) =>
             new string('\t', n);
 
-        void InitDirectory(string directory)
+        static void InitDirectory(string directory)
         {
             if (!Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
         }
 
-        void WriteToFile(StringBuilder builder, string file) =>
+        static void WriteToFile(StringBuilder builder, string file) =>
              File.WriteAllText(file, builder.ToString());
 
-        string BuilderFile(string fileName) =>
+        static string BuilderFile(string fileName) =>
             Path.Combine(BuilderPath(), fileName);
 
-        string ModelsFile(string fileName) =>
+        static string ModelsFile(string fileName) =>
             Path.Combine(ModelsPath(), fileName);
 
-        string TestsPath() =>
+        static string TestsPath() =>
             Directory.GetCurrentDirectory().Split(nameof(Builder))[0];
 
-        string BuilderPath() =>
+        static string BuilderPath() =>
             Path.Combine(Directory.GetCurrentDirectory().Split(nameof(Builder))[0], nameof(Builder));
 
-        string ModelsPath() =>
+        static string ModelsPath() =>
             Path.Combine(Directory.GetCurrentDirectory().Split(nameof(Builder))[0], nameof(Models));
 
-        bool ContainsReadOnlyMembers(TNode node) =>
+        static bool ContainsReadOnlyMembers(TNode node) =>
             node.Name.Split(new string[] { "Readonly", "Literal" }, StringSplitOptions.RemoveEmptyEntries).Length > 1;
 
-        bool ContainsStaticMembers(TNode node) =>
+        static bool ContainsStaticMembers(TNode node) =>
             node.Name.Contains("Static");
 
-        List<TNode> BuildModels()
+        static List<TNode> BuildModels()
         {
             File.WriteAllText(ModelsFile("Models.N0.cs"), File.ReadAllText(BuilderFile("Models.N0.cs")));
 
@@ -129,7 +129,7 @@ namespace Builder
                     new string[] { "TC0", "TS0" }.Contains(t.Name.Split('_')[0]))
                 .Select(t =>
                     new TNode(
-                        t.Name.Split('_')[0].Substring(1),
+                        t.Name.Split('_')[0][1..],
                         t.IsValueType,
                         false,
                         false,
@@ -230,7 +230,7 @@ namespace Builder
             return nodeTypes;
         }
 
-        void BuildToNodesGroup(
+        static void BuildToNodesGroup(
             ref StringBuilder builder,
             ref StringBuilder nonStaticBuilder,
             ref StringBuilder staticBuilder,
@@ -253,7 +253,7 @@ namespace Builder
 
                 intermediate
                     .AppendLine($"{Tabs(2)}[Fact]")
-                    .AppendLine($"{Tabs(2)}public void To_{IsNullable(isNullable, "N")}{node.Name.Substring(1)}() => To" +
+                    .AppendLine($"{Tabs(2)}public void To_{IsNullable(isNullable, "N")}{node.Name[1..]}() => To" +
                     $"{(isNullable ? "NullableStruct" : node.IsValueType ? "Struct" : "Class")}<{node.Name}>" +
                     $"({Lower(ContainsReadOnlyMembers(node))}{(depth == 0 ? $", {Lower(containsStaticMembers)}" : string.Empty)});");
 
@@ -270,7 +270,7 @@ namespace Builder
             staticBuilder.AppendLine($"{Tabs(2)}#endregion");
         }
 
-        List<TNode> BuildFromToN()
+        static List<TNode> BuildFromToN()
         {
             var nodeTypes = BuildModels();
 
@@ -327,7 +327,7 @@ namespace Builder
             return nodeTypes;
         }
 
-        void BuildXunitRunnerJson(string directory)
+        static void BuildXunitRunnerJson(string directory)
         {
             if (File.Exists(Path.Combine(directory, "xunit.runner.json")))
                 return;
@@ -338,17 +338,17 @@ namespace Builder
             );
         }
 
-        void Buildcsproj(string directory, string group)
+        static void Buildcsproj(string directory, string group)
         {
             string csproj = Path.Combine(directory, $"{group}.csproj");
-            
+
             File.WriteAllText(
                 csproj,
                 File.ReadAllText(BuilderFile("group.csproj.file"))
             );
         }
 
-        bool ContainsStaticNodes(TNode node)
+        static bool ContainsStaticNodes(TNode node)
         {
             List<string> nodes = new List<string>();
             string block = string.Empty;
@@ -366,31 +366,31 @@ namespace Builder
             return nodes.Exists(n => n.StartsWith('S') && char.IsLetter(n[1]));
         }
 
-        void BuildFromNonStaticModelMembersTest(ref StringBuilder builder, TNode model, bool nullable)
+        static void BuildFromNonStaticModelMembersTest(ref StringBuilder builder, TNode model, bool nullable)
         {
             if (ContainsStaticNodes(model))
                 builder.AppendLine($"{Tabs(1)}[Collection(\"S_{model.Group}\")]");
 
             builder
-                .AppendLine($"{Tabs(1)}public class From_NS_{IsNullable(nullable, "N")}{model.Name.Substring(1)} : FromTo_N{model.Name[2]}_NonStatic_Members<{model.Name}{IsNullable(nullable, "?")}> " +
-                $"{{ public From_NS_{IsNullable(nullable, "N")}{model.Name.Substring(1)}(ITestOutputHelper console) : base(console) {{}} }}")
+                .AppendLine($"{Tabs(1)}public class From_NS_{IsNullable(nullable, "N")}{model.Name[1..]} : FromTo_N{model.Name[2]}_NonStatic_Members<{model.Name}{IsNullable(nullable, "?")}> " +
+                $"{{ public From_NS_{IsNullable(nullable, "N")}{model.Name[1..]}(ITestOutputHelper console) : base(console) {{}} }}")
                 .AppendLine()
                 .AppendLine($"{Tabs(1)}[Collection(\"S_{model.Group}\")]")
-                .AppendLine($"{Tabs(1)}public class From_S_{IsNullable(nullable, "N")}{model.Name.Substring(1)} : FromTo_N{model.Name[2]}_Static_Members<{model.Name}{IsNullable(nullable, "?")}>" +
-                $"{{ public From_S_{IsNullable(nullable, "N")}{model.Name.Substring(1)}(ITestOutputHelper console) : base(console) {{}} }}")
+                .AppendLine($"{Tabs(1)}public class From_S_{IsNullable(nullable, "N")}{model.Name[1..]} : FromTo_N{model.Name[2]}_Static_Members<{model.Name}{IsNullable(nullable, "?")}>" +
+                $"{{ public From_S_{IsNullable(nullable, "N")}{model.Name[1..]}(ITestOutputHelper console) : base(console) {{}} }}")
                 .AppendLine();
         }
 
-        void BuildFromStaticModelMembersTest(ref StringBuilder builder, TNode model, bool nullable)
+        static void BuildFromStaticModelMembersTest(ref StringBuilder builder, TNode model, bool nullable)
         {
             builder
                 .AppendLine($"{Tabs(1)}[Collection(\"S_{model.Group}\")]")
-                .AppendLine($"{Tabs(1)}public class From_{IsNullable(nullable, "N")}{model.Name.Substring(1)} : FromTo_N{model.Name[2]}_Members<{model.Name}{IsNullable(nullable, "?")}> " +
-                $"{{ public From_{IsNullable(nullable, "N")}{model.Name.Substring(1)}(ITestOutputHelper console) : base(console) {{}} }}")
+                .AppendLine($"{Tabs(1)}public class From_{IsNullable(nullable, "N")}{model.Name[1..]} : FromTo_N{model.Name[2]}_Members<{model.Name}{IsNullable(nullable, "?")}> " +
+                $"{{ public From_{IsNullable(nullable, "N")}{model.Name[1..]}(ITestOutputHelper console) : base(console) {{}} }}")
                 .AppendLine();
         }
 
-        void BuildModelTest(ref StringBuilder builder, TNode model, bool nullable)
+        static void BuildModelTest(ref StringBuilder builder, TNode model, bool nullable)
         {
             if (ContainsStaticMembers(model))
                 BuildFromStaticModelMembersTest(ref builder, model, nullable);
@@ -398,7 +398,7 @@ namespace Builder
                 BuildFromNonStaticModelMembersTest(ref builder, model, nullable);
         }
 
-        void BuildGroupTests(IGrouping<string, TNode> group, string path, bool nullable)
+        static void BuildGroupTests(IGrouping<string, TNode> group, string path, bool nullable)
         {
             var groupDirectory = Path.Combine(path, $"{IsNullable(nullable, "N")}{group.Key}");
 
@@ -436,7 +436,7 @@ namespace Builder
                 builder.ToString());
         }
 
-        string CsprosSlnEntry(string path, string group, bool nullable) =>
+        static string CsprojSlnEntry(string path, string group, bool nullable) =>
             $"Project(\"{{9A19103F-16F7-4668-BE54-9A1E7A4F7556}}\") = \"{IsNullable(nullable, "N")}{group}\", " +
             $"\"Tests{path.Split("Tests")[1]}\\{IsNullable(nullable, "N")}{group}\\{IsNullable(nullable, "N")}{group}.csproj\", " +
             $"\"{{{Guid.NewGuid().ToString().ToUpper()}}}\"" +
@@ -463,12 +463,12 @@ namespace Builder
                 foreach (var group in groups)
                 {
                     BuildGroupTests(group, path, false);
-                    slnBuilder.AppendLine(CsprosSlnEntry(path, group.Key, false));
+                    slnBuilder.AppendLine(CsprojSlnEntry(path, group.Key, false));
 
                     if (group.Key.StartsWith('S'))
                     {
                         BuildGroupTests(group, path, true);
-                        slnBuilder.AppendLine(CsprosSlnEntry(path, group.Key, true));
+                        slnBuilder.AppendLine(CsprojSlnEntry(path, group.Key, true));
                     }
                 }
 

@@ -14,7 +14,7 @@ namespace Air.Mapper.Internal
         public Type NullableUnderlyingType { get; }
         public LocalBuilder Local { get; set; }
         public LocalBuilder NullableLocal { get; set; }
-        
+
         public MemberInfo MemberInfo { get; set; }
 
         public bool Load { get; set; }

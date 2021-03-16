@@ -42,22 +42,22 @@ namespace Internal
             return source;
         }
 
-        private S DefaultSource() => default;
+        private static S DefaultSource() => default;
 
-        private D NullableReadonly<D>()
+        private static D NullableReadonly<D>()
         {
             return (D)Activator.CreateInstance(
                 typeof(D),
                 Activator.CreateInstance(Nullable.GetUnderlyingType(typeof(D))));
         }
 
-        private bool CanSerialize<D>(S source, D destination)
+        private static bool CanSerialize<D>(S source, D destination)
         {
             return JsonConvert.SerializeObject(source) != null &&
                 JsonConvert.SerializeObject(destination) != null;
         }
 
-        private void AssertEqualsOrDefaultReadonly<D>(S source, D destination) where D : new()
+        private static void AssertEqualsOrDefaultReadonly<D>(S source, D destination) where D : new()
         {
             Assert.True(CanSerialize(source, destination));
 
@@ -69,7 +69,7 @@ namespace Internal
                 Assert.True(CompareEquals(new D(), destination));
         }
 
-        private void AssertEqualsOrDefault<D>(S source, D destination, bool hasReadonlyMembers) where D : new()
+        private static void AssertEqualsOrDefault<D>(S source, D destination, bool hasReadonlyMembers) where D : new()
         {
             if (hasReadonlyMembers)
                 AssertEqualsOrDefaultReadonly(source, destination);
@@ -85,7 +85,7 @@ namespace Internal
                 Assert.True(CompareEquals(source, destination));
         }
 
-        private void AssertDefaultReadonly<D>(S source, D destination) where D : new()
+        private static void AssertDefaultReadonly<D>(S source, D destination) where D : new()
         {
             Assert.True(CanSerialize(source, destination));
 
@@ -118,7 +118,7 @@ namespace Internal
             }
         }
 
-        private void AssertDefault<D>(S source, D destination, bool hasReadonlyMembers) where D : new()
+        private static void AssertDefault<D>(S source, D destination, bool hasReadonlyMembers) where D : new()
         {
             if (hasReadonlyMembers)
                 AssertDefaultReadonly(source, destination);
@@ -152,7 +152,7 @@ namespace Internal
             }
         }
 
-        private string GetStringMemberPath(Type type)
+        private static string GetStringMemberPath(Type type)
         {
             var path = new List<string>();
             string[] members = new[] { "N1", "N0", "Value", "StringMember" };

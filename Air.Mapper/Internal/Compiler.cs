@@ -141,7 +141,7 @@ namespace Air.Mapper.Internal
                 else if (destinationNode.NullableUnderlyingType != null)
                 {
                     destinationNode.NullableLocal = IL.DeclareLocal(destinationNode.Type);
-                    
+
                     if (!destinationNode.UseMapper)
                         destinationNode.Local = IL.DeclareLocal(destinationNode.NullableUnderlyingType);
                 }

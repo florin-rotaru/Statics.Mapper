@@ -78,7 +78,7 @@ namespace Playground
         public void TypeToTypeKeyDictionary()
         {
             var source = Fixture.Create<Dictionary<Type, TC0_I0_Members>>();
-            
+
             var map = Mapper<Dictionary<Type, TC0_I0_Members>, Dictionary<Type, TC0_I0_Members>>.CompileFunc();
             var destination = map(source);
 

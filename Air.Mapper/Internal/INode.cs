@@ -13,7 +13,7 @@ namespace Air.Mapper.Internal
         Type NullableUnderlyingType { get; }
         LocalBuilder Local { get; set; }
         LocalBuilder NullableLocal { get; set; }
-        
+
         MemberInfo MemberInfo { get; set; }
     }
 }

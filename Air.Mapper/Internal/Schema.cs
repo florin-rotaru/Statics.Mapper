@@ -193,7 +193,7 @@ namespace Air.Mapper.Internal
             (bool)typeof(MapperConfig<,>)
                 .MakeGenericType(new Type[] { sourceNode.Type, destinationNode.Type })
                 .GetProperties(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-                .First(p => p.Name == nameof(MapperConfig <Type, Type>.UsePredefinedMap))
+                .First(p => p.Name == nameof(MapperConfig<Type, Type>.UsePredefinedMap))
                 .GetValue(null, null);
 
         private void SetUseMapper(DestinationNode destinationNode, bool value)
@@ -281,7 +281,7 @@ namespace Air.Mapper.Internal
 
         private bool EvaluateMap(SourceNode sourceNode, DestinationNode destinationNode)
         {
-            if (sourceNode.IsStatic && 
+            if (sourceNode.IsStatic &&
                 destinationNode.IsStatic &&
                 sourceNode.Type == destinationNode.Type)
                 return false;

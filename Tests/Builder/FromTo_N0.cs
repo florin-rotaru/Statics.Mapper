@@ -52,15 +52,15 @@ namespace Internal
             return array;
         }
 
-        private S DefaultSource() => default;
+        private static S DefaultSource() => default;
 
-        private bool CanSerialize<D>(S source, D destination)
+        private static bool CanSerialize<D>(S source, D destination)
         {
             return JsonConvert.SerializeObject(source) != null &&
                 JsonConvert.SerializeObject(destination) != null;
         }
 
-        private void AssertInstanceOrDefaultReadonly<D>(S source, D destination) where D : new()
+        private static void AssertInstanceOrDefaultReadonly<D>(S source, D destination) where D : new()
         {
             Assert.True(CanSerialize(source, destination));
 
@@ -79,7 +79,7 @@ namespace Internal
             }
         }
 
-        private void AssertEqualsOrDefault<D>(
+        private static void AssertEqualsOrDefault<D>(
            S[] source,
            D[] destination,
            bool hasReadonlyMembers,
@@ -92,7 +92,7 @@ namespace Internal
                 AssertEqualsOrDefault(source[i], destination[i], hasReadonlyMembers);
         }
 
-        private void AssertEqualsOrDefault<D>(
+        private static void AssertEqualsOrDefault<D>(
             S source,
             D destination,
             bool hasReadonlyMembers) where D : new()
@@ -111,7 +111,7 @@ namespace Internal
                 Assert.True(CompareEquals(source, destination));
         }
 
-        private void AssertDefault<D>(
+        private static void AssertDefault<D>(
             S source,
             D destination,
             bool hasReadonlyMembers) where D : new()
@@ -148,14 +148,14 @@ namespace Internal
             }
         }
 
-        private object MemberValue<T>(T source, string memberName)
+        private static object MemberValue<T>(T source, string memberName)
         {
             return Air.Reflection.TypeInfo.GetMembers(typeof(T), true)
                 .First(m => m.Name == memberName)
                 .GetValue(source);
         }
 
-        private void AssertIntToStringEquals<D>(S source, D destination)
+        private static void AssertIntToStringEquals<D>(S source, D destination)
         {
             Assert.True(
                 CompareEquals(
@@ -165,7 +165,7 @@ namespace Internal
                     useConvert: true));
         }
 
-        private void AssertDefaultStringMemberValue<D>(S source, D destination) where D : new()
+        private static void AssertDefaultStringMemberValue<D>(S source, D destination) where D : new()
         {
             if (Nullable.GetUnderlyingType(typeof(S)) != null)
             {
@@ -194,7 +194,7 @@ namespace Internal
             }
         }
 
-        private void AssertIntToDecimalEquals<D>(S source, D destination)
+        private static void AssertIntToDecimalEquals<D>(S source, D destination)
         {
             Assert.True(
                 CompareEquals(
@@ -204,7 +204,7 @@ namespace Internal
                     useConvert: true));
         }
 
-        private void AssertDefaultDecimalMemberValue<D>(S source, D destination) where D : new()
+        private static void AssertDefaultDecimalMemberValue<D>(S source, D destination) where D : new()
         {
             if (Nullable.GetUnderlyingType(typeof(S)) != null)
             {
@@ -340,7 +340,7 @@ namespace Internal
             D[] destination = Mapper<S[], D[]>.Map(source);
             AssertEqualsOrDefault(source, destination, hasReadonlyMembers, hasStaticMembers);
 
-            source = new S[] { };
+            source = Array.Empty<S>();
             destination = Mapper<S[], D[]>.Map(source);
             Assert.Empty(destination);
         }
