@@ -66,7 +66,7 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private void AdaptMapperConfigOptions(
+        private static void AdaptMapperConfigOptions(
             SourceNode sourceNode,
             DestinationNode destinationNode,
             IEnumerable<IMapOption> mapperConfigOptions,
@@ -84,8 +84,9 @@ namespace Air.Mapper.Internal
             outOptions = mapperConfigOptions.ToList();
 
             int optionIndex = outOptions.FindLastIndex(o =>
-                GetDestinationMemberName(o) == string.Empty &&
+                GetDestinationMemberName(o).Count == 0 &&
                 o.Name == nameof(MapOptions<Type, Type>.Ignore));
+
             if (optionIndex != -1)
             {
                 outOptions = outOptions.GetRange(optionIndex, outOptions.Count - optionIndex);
@@ -93,8 +94,9 @@ namespace Air.Mapper.Internal
             }
 
             optionIndex = outOptions.FindLastIndex(o =>
-                GetDestinationMemberName(o) == string.Empty &&
+                GetDestinationMemberName(o).Count == 0 &&
                 o.Name == nameof(MapOptions<Type, Type>.Map));
+
             if (optionIndex != -1)
             {
                 outOptions = outOptions.GetRange(optionIndex, outOptions.Count - optionIndex);
@@ -109,11 +111,11 @@ namespace Air.Mapper.Internal
                         {
                             if (destinationNode.Depth != 0)
                             {
-                                IgnoreOption ignoreOption = new IgnoreOption(outOptions[i]);
+                                IgnoreOption ignoreOption = new(outOptions[i]);
                                 outOptions[i] = new IgnoreOption(
                                     destinationNode.Depth != 0 ?
-                                    string.Concat(destinationNode.Name, DOT, ignoreOption.DestinationMemberName) :
-                                    ignoreOption.DestinationMemberName).AsMapOption();
+                                    new List<string> { string.Concat(destinationNode.Name, DOT, ignoreOption.DestinationMemberNames) } :
+                                    ignoreOption.DestinationMemberNames).AsMapOption();
                             }
                         }
                         break;
@@ -121,7 +123,7 @@ namespace Air.Mapper.Internal
                         {
                             if (sourceNode.Depth != 0 || destinationNode.Depth != 0)
                             {
-                                MapOption mapOption = new MapOption(outOptions[i]);
+                                MapOption mapOption = new(outOptions[i]);
                                 outOptions[i] = new MapOption(
                                     sourceNode.Depth != 0 ?
                                     string.Concat(sourceNode.Name, DOT, mapOption.SourceMemberName) :
@@ -142,19 +144,19 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private IEnumerable<IMapOption> GetMapperConfigOptions(SourceNode sourceNode, DestinationNode destinationNode) =>
+        private static IEnumerable<IMapOption> GetMapperConfigOptions(SourceNode sourceNode, DestinationNode destinationNode) =>
             (IEnumerable<IMapOption>)
                 typeof(MapperConfig<,>)
                     .MakeGenericType(new Type[] { sourceNode.Type, destinationNode.Type })
                     .GetMethod(nameof(MapperConfig<Type, Type>.GetOptions))
                     .Invoke(null, null);
 
-        private string GetDestinationMemberName(IMapOption option)
+        private static List<string> GetDestinationMemberName(IMapOption option)
         {
             return option.Name switch
             {
-                nameof(MapOptions<Type, Type>.Ignore) => new IgnoreOption(option).DestinationMemberName,
-                nameof(MapOptions<Type, Type>.Map) => new MapOption(option).DestinationMemberName,
+                nameof(MapOptions<Type, Type>.Ignore) => new IgnoreOption(option).DestinationMemberNames,
+                nameof(MapOptions<Type, Type>.Map) => new List<string> { new MapOption(option).DestinationMemberName },
                 _ => null,
             };
         }
@@ -179,24 +181,24 @@ namespace Air.Mapper.Internal
 
         private void ApplyIgnoreOption(IMapOption option)
         {
-            IgnoreOption ignoreOption = new IgnoreOption(option);
-            ApplyIgnoreOption(new[] { ignoreOption.DestinationMemberName });
+            IgnoreOption ignoreOption = new(option);
+            ApplyIgnoreOption(ignoreOption.DestinationMemberNames);
         }
 
         private void ApplyMapOption(IMapOption option)
         {
-            MapOption mapOption = new MapOption(option);
+            MapOption mapOption = new(option);
             ApplyMapOption(mapOption.SourceMemberName, mapOption.DestinationMemberName, mapOption.Expand, mapOption.UseMapperConfig);
         }
 
-        private bool UseMapperMap(SourceNode sourceNode, DestinationNode destinationNode) =>
+        private static bool UseMapperMap(SourceNode sourceNode, DestinationNode destinationNode) =>
             (bool)typeof(MapperConfig<,>)
                 .MakeGenericType(new Type[] { sourceNode.Type, destinationNode.Type })
                 .GetProperties(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
                 .First(p => p.Name == nameof(MapperConfig<Type, Type>.UsePredefinedMap))
                 .GetValue(null, null);
 
-        private void SetUseMapper(DestinationNode destinationNode, bool value)
+        private static void SetUseMapper(DestinationNode destinationNode, bool value)
         {
             foreach (DestinationNode parentNode in destinationNode.ParentNodes)
                 parentNode.UseMapper = false;
@@ -242,7 +244,7 @@ namespace Air.Mapper.Internal
 
                 if (useMapperConfig &&
                     withRootOption &&
-                    options.Any(o => GetDestinationMemberName(o) == NodeMemberName(destinationNode.Name, destinationNodeMember.Info.Name)))
+                    options.Any(o => GetDestinationMemberName(o).Contains(NodeMemberName(destinationNode.Name, destinationNodeMember.Info.Name))))
                     continue;
 
                 MemberInfo sourceNodeMember =
@@ -380,9 +382,9 @@ namespace Air.Mapper.Internal
                 Ignore(childNode);
         }
 
-        private void ApplyIgnoreOption(string[] destinationMembers)
+        private void ApplyIgnoreOption(List<string> destinationMembers)
         {
-            for (int d = 0; d < destinationMembers.Length; d++)
+            for (int d = 0; d < destinationMembers.Count; d++)
             {
                 string destinationMember = ResolveDestinationMemberName(destinationMembers[d]);
 
@@ -426,7 +428,7 @@ namespace Air.Mapper.Internal
             if (childNodes.Count == 0)
                 return;
 
-            Queue<SourceNode> queue = new Queue<SourceNode>(childNodes);
+            Queue<SourceNode> queue = new(childNodes);
 
             while (queue.Count != 0)
             {
@@ -653,7 +655,7 @@ namespace Air.Mapper.Internal
         private bool IsDestinationNode(string memberName) =>
             memberName == string.Empty || DestinationNodes.Any(n => n.Name == memberName);
 
-        public IEnumerable<DestinationNodeMember> GetDestinationNodeMembers(DestinationNode destinationNode, Func<DestinationNodeMember, bool> predicate) =>
+        public static IEnumerable<DestinationNodeMember> GetDestinationNodeMembers(DestinationNode destinationNode, Func<DestinationNodeMember, bool> predicate) =>
             destinationNode.Members.Where(predicate);
 
         public static MemberInfo GetMember(string nodeName, IEnumerable<TypeNode> nodes) =>
@@ -673,7 +675,7 @@ namespace Air.Mapper.Internal
 
         public IEnumerable<SourceNode> GetParentNodes(SourceNode node)
         {
-            List<SourceNode> returnValue = new List<SourceNode>();
+            List<SourceNode> returnValue = new();
 
             if (node.Name == string.Empty)
                 return returnValue;
@@ -694,7 +696,7 @@ namespace Air.Mapper.Internal
 
         public IEnumerable<DestinationNode> GetParentNodes(DestinationNode node)
         {
-            List<DestinationNode> returnValue = new List<DestinationNode>();
+            List<DestinationNode> returnValue = new();
 
             if (node.Name == string.Empty)
                 return returnValue;
@@ -735,7 +737,7 @@ namespace Air.Mapper.Internal
 
         public static IEnumerable<TypeNode> GetNodes(Type type, Func<MemberInfo, bool> predicate)
         {
-            List<TypeNode> returnValue = new List<TypeNode>();
+            List<TypeNode> returnValue = new();
             List<TypeNode> nodes = TypeInfo.GetNodes(type, true).ToList();
             nodes.Sort((l, r) => l.Depth.CompareTo(r.Depth));
 

@@ -75,6 +75,17 @@ namespace Playground
         }
 
         [Fact]
+        public void IgnoreNodeMembers()
+        {
+            var source = Fixture.Create<TC1C0_I0_Members>();
+            var map = Mapper<TC1C0_I0_Members, TC1C0_I0_Members>.CompileFunc(o => o
+                .Ignore(i => new { i.N0.StringMember, i.N0.Int32Member }));
+            var destination = map(source);
+            Assert.Null(destination.N0.StringMember);
+            Assert.Equal(0, destination.N0.Int32Member);
+        }
+
+        [Fact]
         public void TypeToTypeKeyDictionary()
         {
             var source = Fixture.Create<Dictionary<Type, TC0_I0_Members>>();

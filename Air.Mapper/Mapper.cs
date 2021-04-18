@@ -10,7 +10,7 @@ namespace Air.Mapper
 
         private static IEnumerable<IMapOption> ParseMapOptions(Action<MapOptions<S, D>> mapOptions = null)
         {
-            MapOptions<S, D> options = new MapOptions<S, D>();
+            MapOptions<S, D> options = new();
             mapOptions?.Invoke(options);
 
             return options.Get();

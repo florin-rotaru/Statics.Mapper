@@ -6,7 +6,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Florin Rotaru</Authors>
     <Company />
-    <Version>5.0.0</Version>
+    <Version>5.0.1</Version>
 	<PackageLicenseFile>LICENSE</PackageLicenseFile>
 	<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
 	<Description>Simple and fast open source mapping library which allows to map one type members into another. Maps members based on conventions (public properties with the same names and same/derived/convertible types), compiles func / action delegates mappers</Description>
@@ -18,7 +18,7 @@
     <None Include="LICENSE" Pack="true" PackagePath="" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Air.Reflection" Version="5.0.0" />
+    <PackageReference Include="Air.Reflection" Version="5.0.1" />
     <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
   </ItemGroup>
 

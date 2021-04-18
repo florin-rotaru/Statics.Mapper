@@ -14,9 +14,9 @@ namespace Air.Mapper.Internal
     {
         private LocalBuilder LoopIndexLocal { get; set; }
         private LocalBuilder LoopLengthLocal { get; set; }
-        private List<LocalBuilder> CollectionSourceLocals { get; set; } = new List<LocalBuilder>();
-        private List<LocalBuilder> CollectionSourceLocalEnumerators { get; set; } = new List<LocalBuilder>();
-        private List<LocalBuilder> CollectionDestinationLocals { get; set; } = new List<LocalBuilder>();
+        private List<LocalBuilder> CollectionSourceLocals { get; set; } = new();
+        private List<LocalBuilder> CollectionSourceLocalEnumerators { get; set; } = new();
+        private List<LocalBuilder> CollectionDestinationLocals { get; set; } = new();
         private Dictionary<(Type, Type), LocalBuilder> CollectionMapperMapLocals { get; set; } = new Dictionary<(Type, Type), LocalBuilder>();
 
         private LocalBuilder GetOrAddLoopIndexLocal()
@@ -49,7 +49,7 @@ namespace Air.Mapper.Internal
             return sourceLocal;
         }
 
-        private MethodInfo GetEnumerator(Type collectionType) =>
+        private static MethodInfo GetEnumerator(Type collectionType) =>
             collectionType.GetMethod(nameof(IEnumerable.GetEnumerator), Type.EmptyTypes) ??
                 typeof(IEnumerable<>).MakeGenericType(GetIEnumerableArgument(collectionType))
                     .GetMethod(nameof(IEnumerable.GetEnumerator), Type.EmptyTypes);
@@ -494,7 +494,7 @@ namespace Air.Mapper.Internal
             }
         }
 
-        private MethodInfo GetImmutableCreateRangeMethod(CollectionInfo collectionInfo)
+        private static MethodInfo GetImmutableCreateRangeMethod(CollectionInfo collectionInfo)
         {
             MethodInfo method = ImmutableGenericCollectionBuilders
                 .First(t => t.GenericTypeDefinition == collectionInfo.DestinationType.GetGenericTypeDefinition())
@@ -740,7 +740,7 @@ namespace Air.Mapper.Internal
             DestinationNode destinationNode,
             DestinationNodeMember destinationNodeMember)
         {
-            CollectionInfo collectionInfo = new CollectionInfo(destinationNode, destinationNodeMember);
+            CollectionInfo collectionInfo = new(destinationNode, destinationNodeMember);
 
             Load(
                 collectionInfo.DestinationNodeMember.SourceNode,
@@ -767,7 +767,7 @@ namespace Air.Mapper.Internal
             Type sourceType,
             Type destinationType)
         {
-            CollectionInfo collectionInfo = new CollectionInfo(sourceType, destinationType);
+            CollectionInfo collectionInfo = new(sourceType, destinationType);
 
             IL.EmitLdarg(0);
             if (sourceType.IsValueType)

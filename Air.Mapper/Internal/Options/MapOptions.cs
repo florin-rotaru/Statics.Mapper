@@ -2,6 +2,7 @@
 using Air.Reflection;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace Air.Mapper
@@ -14,13 +15,18 @@ namespace Air.Mapper
 
         public MapOptions<S, D> Ignore(Expression<Func<D, object>> destination)
         {
-            Options.Add(new Option(nameof(Ignore), new object[] { TypeInfo.GetName(destination, true) }));
+            Expression expressionBody = destination.Body;
+            if (expressionBody is NewExpression)
+                Options.Add(new Option(nameof(Ignore), TypeInfo.GetNames(destination, true).ToArray()));
+            else
+                Options.Add(new Option(nameof(Ignore), new object[] { TypeInfo.GetName(destination, true) }));
+
             return this;
         }
 
-        public MapOptions<S, D> Ignore(string destination)
+        public MapOptions<S, D> Ignore(params string[] destination)
         {
-            Options.Add(new Option(nameof(Ignore), new object[] { destination }));
+            Options.Add(new Option(nameof(Ignore), destination));
             return this;
         }
 

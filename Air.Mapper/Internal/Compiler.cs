@@ -53,9 +53,9 @@ namespace Air.Mapper.Internal
             Schema = new Schema(SourceType, DestinationType, MapOptions);
         }
 
-        private IEnumerable<SourceNode> GetDestinationNodeSources(DestinationNode destinationNode)
+        private static IEnumerable<SourceNode> GetDestinationNodeSources(DestinationNode destinationNode)
         {
-            List<SourceNode> returnValue = new List<SourceNode>();
+            List<SourceNode> returnValue = new();
 
             if (destinationNode.UseMapper)
             {
@@ -86,9 +86,9 @@ namespace Air.Mapper.Internal
             return returnValue;
         }
 
-        private IEnumerable<DestinationNode> GetDistinctNodes(IEnumerable<DestinationNode> destinationNodes)
+        private static IEnumerable<DestinationNode> GetDistinctNodes(IEnumerable<DestinationNode> destinationNodes)
         {
-            List<DestinationNode> returnValue = new List<DestinationNode>();
+            List<DestinationNode> returnValue = new();
 
             foreach (DestinationNode destinationNode in destinationNodes)
                 if (!returnValue.Exists(n => n.Name == destinationNode.Name))
@@ -646,7 +646,7 @@ namespace Air.Mapper.Internal
 
         private void MapSourceNode(SourceNode sourceNode)
         {
-            List<DestinationNode> destinationNodes = new List<DestinationNode>();
+            List<DestinationNode> destinationNodes = new();
 
             Schema.ForEachDestinationNode(
                 n => n.Load,
@@ -791,7 +791,7 @@ namespace Air.Mapper.Internal
                 return;
             }
 
-            List<DestinationNodeMember> loadAndSetQueue = new List<DestinationNodeMember>();
+            List<DestinationNodeMember> loadAndSetQueue = new();
 
             if (destinationNode.Depth != 0 && !destinationNode.IsStatic)
                 Load(destinationNode.ParentNode);

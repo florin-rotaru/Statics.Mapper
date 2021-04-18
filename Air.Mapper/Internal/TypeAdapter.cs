@@ -6,7 +6,7 @@ namespace Air.Mapper.Internal
 {
     internal static class TypeAdapters
     {
-        private static readonly ConcurrentDictionary<Type, Type> Adapters = new ConcurrentDictionary<Type, Type>(
+        private static readonly ConcurrentDictionary<Type, Type> Adapters = new(
             new Dictionary<Type, Type>
             {
                 { typeof(KeyValuePair<,>), typeof(KeyValue<,>) }
