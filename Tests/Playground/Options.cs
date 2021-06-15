@@ -1,4 +1,4 @@
-using Air.Mapper;
+using Statics.Mapper;
 using AutoFixture;
 using Models;
 using System;
@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
-using static Air.Compare.Members;
+using static Statics.Compare.Members;
 
 namespace Playground
 {

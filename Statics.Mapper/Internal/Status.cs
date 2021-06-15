@@ -1,4 +1,4 @@
-﻿namespace Air.Mapper.Internal
+﻿namespace Statics.Mapper.Internal
 {
     internal enum Status
     {

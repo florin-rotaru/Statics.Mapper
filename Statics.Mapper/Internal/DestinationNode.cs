@@ -1,10 +1,10 @@
-﻿using Air.Reflection;
+﻿using Statics.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal class DestinationNode : INode
     {

@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal static class TypeAdapters
     {

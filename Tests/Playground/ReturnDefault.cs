@@ -1,4 +1,4 @@
-﻿using Air.Mapper;
+﻿using Statics.Mapper;
 using Models;
 using Xunit;
 

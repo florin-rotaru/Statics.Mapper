@@ -1,8 +1,8 @@
-﻿using Air.Mapper.Internal;
+﻿using Statics.Mapper.Internal;
 using System;
 using System.Collections.Generic;
 
-namespace Air.Mapper
+namespace Statics.Mapper
 {
     public static partial class Mapper<S, D>
     {

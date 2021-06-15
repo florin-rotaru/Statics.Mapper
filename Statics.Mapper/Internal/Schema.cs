@@ -1,11 +1,11 @@
-﻿using Air.Reflection;
-using Air.Reflection.Emit;
+﻿using Statics.Reflection;
+using Statics.Reflection.Emit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Air.Mapper.Internal.Collections;
+using static Statics.Mapper.Internal.Collections;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal class Schema
     {

@@ -1,4 +1,4 @@
-﻿using Air.Mapper;
+﻿using Statics.Mapper;
 using AutoFixture;
 using Models;
 using Newtonsoft.Json;
@@ -6,7 +6,7 @@ using System;
 using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
-using static Air.Compare.Members;
+using static Statics.Compare.Members;
 
 namespace Internal
 {
@@ -150,7 +150,7 @@ namespace Internal
 
         private static object MemberValue<T>(T source, string memberName)
         {
-            return Air.Reflection.TypeInfo.GetMembers(typeof(T), true)
+            return Statics.Reflection.TypeInfo.GetMembers(typeof(T), true)
                 .First(m => m.Name == memberName)
                 .GetValue(source);
         }

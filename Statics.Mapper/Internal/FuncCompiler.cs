@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal class FuncCompiler : Compiler
     {
@@ -224,7 +224,7 @@ namespace Air.Mapper.Internal
         private void CreateSignature(bool debug)
         {
             Method = new DynamicMethod(
-                $"{nameof(Air)}{Guid.NewGuid():N}",
+                $"{nameof(Statics)}{Guid.NewGuid():N}",
                 DestinationType,
                 new[] { SourceType },
                 typeof(Mapper<,>).MakeGenericType(SourceType, DestinationType).Module,

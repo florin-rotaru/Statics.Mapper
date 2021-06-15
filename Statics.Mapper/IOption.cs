@@ -1,4 +1,4 @@
-﻿namespace Air.Mapper
+﻿namespace Statics.Mapper
 {
     public interface IMapOption
     {

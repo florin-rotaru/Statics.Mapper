@@ -1,4 +1,4 @@
-using Air.Mapper;
+using Statics.Mapper;
 using AutoFixture;
 using Models;
 using Newtonsoft.Json;
@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
-using static Air.Compare.Members;
+using static Statics.Compare.Members;
 
 namespace Internal
 {
@@ -156,21 +156,21 @@ namespace Internal
         {
             var path = new List<string>();
             string[] members = new[] { "N1", "N0", "Value", "StringMember" };
-            var member = Air.Reflection.TypeInfo.GetMembers(type).FirstOrDefault(m => members.Contains(m.Name));
+            var member = Statics.Reflection.TypeInfo.GetMembers(type).FirstOrDefault(m => members.Contains(m.Name));
 
             while (member != null)
             {
                 path.Add(member.Name);
-                member = Air.Reflection.TypeInfo.GetMembers(member.Type).FirstOrDefault(m => members.Contains(m.Name));
+                member = Statics.Reflection.TypeInfo.GetMembers(member.Type).FirstOrDefault(m => members.Contains(m.Name));
             }
 
             return string.Join('.', path);
         }
 
-        private Air.Reflection.MemberInfo GetMemberInfo(Type type)
+        private Statics.Reflection.MemberInfo GetMemberInfo(Type type)
         {
             string[] members = new[] { "N1", "N0", "Value" };
-            var memberInfo = Air.Reflection.TypeInfo.GetMembers(type).FirstOrDefault(m => members.Contains(m.Name));
+            var memberInfo = Statics.Reflection.TypeInfo.GetMembers(type).FirstOrDefault(m => members.Contains(m.Name));
             if (memberInfo == null)
                 return memberInfo;
 

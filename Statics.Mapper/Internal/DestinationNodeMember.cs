@@ -1,6 +1,6 @@
 ﻿using System.Reflection.Emit;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal class DestinationNodeMember
     {

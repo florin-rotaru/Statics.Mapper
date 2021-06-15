@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal partial class Compiler
     {

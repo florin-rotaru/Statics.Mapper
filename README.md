@@ -1,4 +1,4 @@
-# What is Air.Mapper?
+# What is Statics.Mapper?
 
 Is a simple and fast open source mapping library which allows to map one type members into another.
 
@@ -9,7 +9,7 @@ Is a simple and fast open source mapping library which allows to map one type me
 
 You can install it via [package manager console](https://docs.microsoft.com/en-us/nuget/consume-packages/install-use-packages-powershell)
 ```
-PM> Install-Package Air.Mapper
+PM> Install-Package Statics.Mapper
 ```
 
 ## Basic usage
@@ -63,45 +63,46 @@ When **true** MapperConfig options are applied
 ## Built with performance in mind 
 ``` ini
 
-BenchmarkDotNet=v0.12.1, OS=Windows 10.0.18363.1082 (1909/November2018Update/19H2)
+BenchmarkDotNet=v0.13.0, OS=Windows 10.0.19042.1052 (20H2/October2020Update)
 Intel Core i7-6820HQ CPU 2.70GHz (Skylake), 1 CPU, 8 logical and 4 physical cores
-.NET Core SDK=3.1.402
-  [Host] : .NET Core 3.1.8 (CoreCLR 4.700.20.41105, CoreFX 4.700.20.41903), X64 RyuJIT
+.NET SDK=5.0.301
+  [Host] : .NET 5.0.7 (5.0.721.25508), X64 RyuJIT
 
 Job=InProcess  Toolchain=InProcessEmitToolchain  
 
 ```
-|           Method |       Mean |     Error |    StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-|----------------- |-----------:|----------:|----------:|-------:|------:|------:|----------:|
-| ExpressMapperMap | 2,263.7 ns |  45.18 ns |  57.14 ns | 0.9499 |     - |     - |    3985 B |
-|   AgileMapperMap | 1,047.8 ns |   5.91 ns |   5.53 ns | 0.8221 |     - |     - |    3441 B |
-|    TinyMapperMap | 3,977.6 ns |  13.73 ns |  12.85 ns | 0.8240 |     - |     - |    3465 B |
-|    AutoMapperMap | 2,178.8 ns |  23.08 ns |  20.46 ns | 0.7706 |     - |     - |    3225 B |
-|       MapsterMap |   736.0 ns |   8.18 ns |   7.65 ns | 0.7362 |     - |     - |    3080 B |
-|     AirMapperMap |   668.6 ns |   3.00 ns |   2.66 ns | 0.7362 |     - |     - |    3080 B |
-|    FastMapperMap | 5,666.5 ns | 103.45 ns | 127.05 ns | 1.9608 |     - |     - |    8218 B |
-| ValueInjecterMap | 4,784.0 ns |  17.14 ns |  15.19 ns | 0.1984 |     - |     - |     840 B |
-|    SafeMapperMap | 1,276.1 ns |  16.25 ns |  13.57 ns | 0.9174 |     - |     - |    3840 B |
+|           Method |       Mean |    Error |   StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
+|----------------- |-----------:|---------:|---------:|-------:|------:|------:|----------:|
+| ExpressMapperMap | 2,115.6 ns | 20.92 ns | 19.57 ns | 0.9499 |     - |     - |   3,985 B |
+|   AgileMapperMap | 1,018.3 ns | 11.28 ns | 10.56 ns | 0.8221 |     - |     - |   3,440 B |
+|    TinyMapperMap | 3,985.2 ns | 15.35 ns | 12.82 ns | 0.8240 |     - |     - |   3,464 B |
+|    AutoMapperMap | 2,282.1 ns | 14.77 ns | 13.82 ns | 0.7706 |     - |     - |   3,224 B |
+|       MapsterMap |   723.7 ns | 10.58 ns |  9.38 ns | 0.7362 |     - |     - |   3,080 B |
+| StaticsMapperMap |   678.2 ns |  9.83 ns |  8.71 ns | 0.7362 |     - |     - |   3,080 B |
+|    FastMapperMap | 5,712.2 ns | 37.14 ns | 34.74 ns | 1.9608 |     - |     - |   8,216 B |
+| ValueInjecterMap | 4,774.0 ns | 46.09 ns | 43.11 ns | 0.1984 |     - |     - |     840 B |
+|    SafeMapperMap | 1,199.8 ns |  5.87 ns |  5.21 ns | 0.9174 |     - |     - |   3,840 B |
+
 
 ### More benchmark results
-https://github.com/florin-rotaru/NetMappers.Benchmarks/tree/master/NetMappers.Benchmarks/BenchmarksResults/2021.02.25
+https://github.com/florin-rotaru/net-mappers-benchmarks/tree/master/net-mappers-benchmarks/BenchmarksResults/2021.06.14
 
 ### Benchmark results summary
 |Library             |Passed                  |Failed                  
 |--------------------|------------------------|------------------------
-|ExpressMapper       |16                      |0                       
-|AgileMapper         |16                      |0                       
-|TinyMapper          |4                       |12                      
-|AutoMapper          |16                      |0                       
-|Mapster             |16                      |0                       
-|AirMapper           |16                      |0                       
-|HigLaboObjectMapper |13                      |3                       
-|FastMapper          |1                       |15                      
-|ValueInjecter       |8                       |8                       
-|PowerMapper         |12                      |4                       
-|SafeMapper          |8                       |8    
+|ExpressMapper       |17                      |0                       
+|AgileMapper         |17                      |0                       
+|AutoMapper          |17                      |0                       
+|Mapster             |17                      |0                       
+|StaticsMapper       |17                      |0                       
+|HigLaboObjectMapper |14                      |3                       
+|FastMapper          |2                       |15                      
+|ValueInjecter       |8                       |9                       
+|PowerMapper         |12                      |5                       
+|SafeMapper          |9                       |8                       
+   
 
 - passed: no exception thrown nor differences between source and destination members
 - failed: exception thrown or differences found between source and destination members
-  - [exceptions](https://github.com/florin-rotaru/NetMappers.Benchmarks/blob/master/NetMappers.Benchmarks/BenchmarksResults/2021.02.25/Failed.Exceptions.md)
-  - [diffs](https://github.com/florin-rotaru/NetMappers.Benchmarks/blob/master/NetMappers.Benchmarks/BenchmarksResults/2021.02.25/Failed.Diffs.md)
+  - [exceptions](https://github.com/florin-rotaru/net-mappers-benchmarks/tree/master/net-mappers-benchmarks/BenchmarksResults/2021.06.14/Failed.Exceptions.md)
+  - [diffs](https://github.com/florin-rotaru/net-mappers-benchmarks/tree/master/net-mappers-benchmarks/BenchmarksResults/2021.06.14/Failed.Diffs.md)

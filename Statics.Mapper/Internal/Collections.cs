@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal class Collections
     {

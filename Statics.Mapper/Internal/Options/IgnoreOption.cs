@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal class IgnoreOption
     {

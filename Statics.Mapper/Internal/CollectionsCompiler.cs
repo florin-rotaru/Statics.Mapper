@@ -6,9 +6,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using static Air.Mapper.Internal.Collections;
+using static Statics.Mapper.Internal.Collections;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal partial class Compiler
     {

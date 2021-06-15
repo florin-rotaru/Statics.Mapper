@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Air.Mapper
+namespace Statics.Mapper
 {
     public class MapperConfig<S, D>
     {

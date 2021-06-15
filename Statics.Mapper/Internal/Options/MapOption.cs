@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal class MapOption
     {

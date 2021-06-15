@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     public struct KeyValue<TKey, TValue>
     {

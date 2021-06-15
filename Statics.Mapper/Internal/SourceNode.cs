@@ -1,9 +1,9 @@
-﻿using Air.Reflection;
+﻿using Statics.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-namespace Air.Mapper.Internal
+namespace Statics.Mapper.Internal
 {
     internal class SourceNode : INode
     {

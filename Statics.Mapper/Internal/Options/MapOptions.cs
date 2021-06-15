@@ -1,11 +1,11 @@
-﻿using Air.Mapper.Internal;
-using Air.Reflection;
+﻿using Statics.Mapper.Internal;
+using Statics.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace Air.Mapper
+namespace Statics.Mapper
 {
     public class MapOptions<S, D>
     {
