@@ -87,7 +87,7 @@ namespace Builder
             char.ToUpper(text[0]) + text[1..];
 
         static string Tabs(int n) =>
-            new string('\t', n);
+            new('\t', n);
 
         static void InitDirectory(string directory)
         {
@@ -142,7 +142,7 @@ namespace Builder
 
                 builder
                     .AppendLine()
-                    .AppendLine($"namespace {nameof(Models)}")
+                    .AppendLine($"namespace {nameof(Models)}.Tests")
                     .AppendLine("{");
 
                 foreach (var modelTemplate in TModels)
@@ -173,7 +173,7 @@ namespace Builder
                                     .Where(m => m.Group.StartsWith($"S{depth - 1}"))
                                     .Select(s => new TNode($"SN{s.Group}", s.IsValueType, true, true, s.Name))
                                     .ToList(),
-                                _ => throw new Exception(),
+                                _ => throw new(),
                             };
                         }
 
@@ -350,7 +350,7 @@ namespace Builder
 
         static bool ContainsStaticNodes(TNode node)
         {
-            List<string> nodes = new List<string>();
+            List<string> nodes = new();
             string block = string.Empty;
 
             foreach (char c in node.Group)
@@ -422,7 +422,7 @@ namespace Builder
             builder.AppendLine();
 
             builder
-                .AppendLine($"namespace {IsNullable(nullable, "N")}{group.Key}")
+                .AppendLine($"namespace {IsNullable(nullable, "N")}{group.Key}.Tests")
                 .AppendLine("{");
 
             foreach (TNode model in group)

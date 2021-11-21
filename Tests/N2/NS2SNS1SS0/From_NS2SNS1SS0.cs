@@ -3,7 +3,7 @@ using Models;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace NS2SNS1SS0
+namespace NS2SNS1SS0.Tests
 {
 	[Collection("S_S2SNS1SS0")]
 	public class From_NS_NS2SNS1SS0_I0_Members : FromTo_N2_NonStatic_Members<TS2SNS1SS0_I0_Members?> { public From_NS_NS2SNS1SS0_I0_Members(ITestOutputHelper console) : base(console) {} }

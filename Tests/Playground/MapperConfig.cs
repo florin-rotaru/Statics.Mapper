@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using Xunit;
 using static Statics.Compare.Members;
 
-namespace Playground
+namespace Playground.Tests
 {
     [Collection(nameof(MapperConfig))]
     public class MapperConfig

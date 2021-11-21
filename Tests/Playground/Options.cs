@@ -8,7 +8,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static Statics.Compare.Members;
 
-namespace Playground
+namespace Playground.Tests
 {
     [Collection(nameof(Options))]
     public class Options

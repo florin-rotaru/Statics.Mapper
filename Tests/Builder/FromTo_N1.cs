@@ -1,7 +1,7 @@
-﻿using Statics.Mapper;
-using AutoFixture;
+﻿using AutoFixture;
 using Models;
 using Newtonsoft.Json;
+using Statics.Mapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -243,7 +243,7 @@ namespace Internal
 
             // =======
             S source = NewSource();
-            D destination = new D();
+            D destination = new();
             mapActionRef(source, ref destination);
             AssertEqualsOrDefault(source, destination, hasReadonlyMembers);
 
@@ -273,7 +273,7 @@ namespace Internal
 
             // =======
             S source = NewSource();
-            D destination = new D();
+            D destination = new();
             mapActionRef(source, ref destination);
             AssertEqualsOrDefault(source, destination, hasReadonlyMembers);
 
@@ -303,7 +303,7 @@ namespace Internal
 
             // =======
             S source = NewSource();
-            D? destination = new D?();
+            D? destination = new();
             mapActionRef(source, ref destination);
             AssertEqualsOrDefault(source, destination, hasReadonlyMembers);
 

@@ -2,24 +2,24 @@
 
   <PropertyGroup>
 	<PackageId>Statics.Mapper</PackageId>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Florin Rotaru</Authors>
     <Company />
-    <Version>5.0.1</Version>
+    <Version>6.0.0</Version>
 	<PackageLicenseFile>LICENSE</PackageLicenseFile>
 	<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
 	<Description>Simple and fast open source mapping library which allows to map one type members into another. Maps members based on conventions (public properties with the same names and same/derived/convertible types), compiles func / action delegates mappers</Description>
 	<PackageTags>mapper, automapper, action-delegates-mappers, delegates-mappers, compile-mapper-method</PackageTags>
-  <LangVersion>9.0</LangVersion>
-  <RepositoryUrl>https://github.com/florin-rotaru/Statics.Mapper</RepositoryUrl>
+    <LangVersion>9.0</LangVersion>
+    <RepositoryUrl>https://github.com/florin-rotaru/Statics.Mapper</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <None Include="LICENSE" Pack="true" PackagePath="" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Statics.Reflection" Version="5.0.2" />
-    <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
+    <PackageReference Include="Statics.Reflection" Version="6.0.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
   </ItemGroup>
 
 </Project>

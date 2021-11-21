@@ -9,7 +9,7 @@ using System.Linq;
 using Xunit;
 using static Statics.Compare.Members;
 
-namespace Playground
+namespace Playground.Tests
 {
     [Collection(nameof(Collections))]
     public class Collections
