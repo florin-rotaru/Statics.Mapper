@@ -2,12 +2,12 @@
 
 namespace Statics.Mapper.Internal
 {
-    public struct KeyValue<TKey, TValue>
+    internal struct KeyValue<TKey, TValue>
     {
         public TKey Key { get; set; }
         public TValue Value { get; set; }
 
         public KeyValuePair<TKey, TValue> ToKeyValuePair() =>
-            new KeyValuePair<TKey, TValue>(Key, Value);
+            new(Key, Value);
     }
 }
