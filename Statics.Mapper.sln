@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30104.148
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Statics.Mapper", "Statics.Mapper\Statics.Mapper.csproj", "{89AE1CF9-97BB-4DD6-8FBD-B14B4D0E3014}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Statics.Mapper", "Src\Statics.Mapper.csproj", "{89AE1CF9-97BB-4DD6-8FBD-B14B4D0E3014}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{205E737D-0ACE-4BE4-8F14-4BDC37DC59F0}"
 EndProject

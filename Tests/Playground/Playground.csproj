@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Statics.Mapper\Statics.Mapper.csproj" />
+    <ProjectReference Include="..\..\Src\Statics.Mapper.csproj" />
     <ProjectReference Include="..\Models\Models.csproj" />
   </ItemGroup>
 
