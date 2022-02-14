@@ -179,12 +179,6 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void ApplyIgnoreOption(IMapOption option)
-        {
-            IgnoreOption ignoreOption = new(option);
-            ApplyIgnoreOption(ignoreOption.DestinationMemberNames);
-        }
-
         private void ApplyMapOption(IMapOption option)
         {
             MapOption mapOption = new(option);
@@ -324,7 +318,7 @@ namespace Statics.Mapper.Internal
             if (sourceMemberIsNode != destinationMemberIsNode)
                 throw new InvalidOperationException();
 
-            if (sourceMemberIsNode && destinationMemberIsNode)
+            if (sourceMemberIsNode)
             {
                 sourceNode = SourceNodes.First(w => w.Name == sourceMember);
                 destinationNode = DestinationNodes.First(w => w.Name == destinationMember);
@@ -345,9 +339,7 @@ namespace Statics.Mapper.Internal
             destinationNode = DestinationNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(destinationMember));
             destinationNodeMember = destinationNode.Members.FirstOrDefault(w => w.Info.Name == TypeInfo.GetName(destinationMember));
 
-            if (sourceNode == null ||
-                sourceNodeMember == null ||
-                destinationNode == null ||
+            if (sourceNodeMember == null ||
                 destinationNodeMember == null)
                 throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
 
@@ -407,6 +399,12 @@ namespace Statics.Mapper.Internal
             }
 
             OnChange();
+        }
+
+        private void ApplyIgnoreOption(IMapOption option)
+        {
+            IgnoreOption ignoreOption = new(option);
+            ApplyIgnoreOption(ignoreOption.DestinationMemberNames);
         }
 
         public void ForEachDestinationNode(Func<DestinationNode, bool> predicate, Action<DestinationNode> action)

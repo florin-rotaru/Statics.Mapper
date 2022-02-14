@@ -295,7 +295,7 @@ namespace Statics.Mapper.Internal
                 {
                     IL.EmitCallMethod(typeof(Reflection.Emit.ILGenerator.Converters)
                         .GetMethods()
-                        .Where(m =>
+                        .First(m =>
                             m.Name == ToArray &&
                             m.GetParameters().Length == 1 &&
                             m.GetParameters().Any(p =>
@@ -304,7 +304,6 @@ namespace Statics.Mapper.Internal
                                     (IsAssignableFrom(collectionInfo.SourceType, typeof(ICollection<>)) ?
                                         typeof(ICollection<>) :
                                         typeof(IProducerConsumerCollection<>))))
-                        .First()
                         .MakeGenericMethod(new Type[] { collectionInfo.SourceArgument }));
                 }
 
@@ -424,6 +423,9 @@ namespace Statics.Mapper.Internal
                             .GetProperties()
                             .First(p => p.GetIndexParameters().Length > 0);
 
+                    if (propertyInfo == null)
+                        throw new NotSupportedException($"{nameof(LoadCollectionElement)} {nameof(source)} {nameof(propertyInfo)} cannot be determined");
+
                     if (Reflection.TypeInfo.IsStatic(source) || source.IsValueType)
                         IL.Emit(OpCodes.Call, propertyInfo.GetGetMethod());
                     else
@@ -475,7 +477,7 @@ namespace Statics.Mapper.Internal
                 IL.Emit(OpCodes.Call,
                     typeof(Reflection.Emit.ILGenerator.Converters)
                     .GetMethods()
-                    .Where(m =>
+                    .First(m =>
                         m.Name == ToArray &&
                         m.GetParameters().Length == 1 &&
                         m.GetParameters().Any(p =>
@@ -484,7 +486,6 @@ namespace Statics.Mapper.Internal
                                 (IsAssignableFrom(destinationLocalType, typeof(ICollection<>)) ?
                                     typeof(ICollection<>) :
                                     typeof(IProducerConsumerCollection<>))))
-                    .First()
                     .MakeGenericMethod(new Type[] { collectionInfo.SourceArgument }));
             }
             else
@@ -577,7 +578,6 @@ namespace Statics.Mapper.Internal
 
                     IL.Emit(OpCodes.Ret);
 
-                    return;
                 }
                 else
                 {
@@ -592,7 +592,6 @@ namespace Statics.Mapper.Internal
 
                     IL.Emit(OpCodes.Ret);
 
-                    return;
                 }
             }
             else if (collectionInfo.DestinationType.IsArray)
@@ -609,8 +608,6 @@ namespace Statics.Mapper.Internal
                     IL.EmitStore(DestinationType);
 
                 IL.Emit(OpCodes.Ret);
-
-                return;
 
             }
             else if (MaintainableGenericCollections
@@ -631,7 +628,6 @@ namespace Statics.Mapper.Internal
 
                 IL.Emit(OpCodes.Ret);
 
-                return;
             }
             else if (collectionInfo.DestinationType.GetConstructor(new Type[] { typeof(IEnumerable<>).MakeGenericType(new Type[] { collectionInfo.DestinationArgument }) }) != null)
             {

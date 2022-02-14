@@ -84,7 +84,7 @@ namespace Statics.Mapper.Internal
             new MaintainableCollectionInfo(typeof(ImmutableStack<>), typeof(List<>))
         };
 
-        public static IEnumerable<ImmutableCollectionBuilderInfo> ImmutableGenericCollectionBuilders = new List<ImmutableCollectionBuilderInfo>()
+        public static IEnumerable<ImmutableCollectionBuilderInfo> ImmutableGenericCollectionBuilders { get; } = new List<ImmutableCollectionBuilderInfo>()
         {
             new ImmutableCollectionBuilderInfo(typeof(IImmutableList<>), typeof(ImmutableList)),
             new ImmutableCollectionBuilderInfo(typeof(IImmutableDictionary<,>), typeof(ImmutableDictionary)),

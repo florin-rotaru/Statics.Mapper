@@ -116,10 +116,9 @@ namespace Statics.Mapper.Internal
                     sourceNode.NullableLocal = IL.DeclareLocal(sourceNode.Type);
 
             }
-            else if (sourceNode.Type.IsValueType && sourceNode.Depth != 0)
+            else if (sourceNode.Type.IsValueType && sourceNode.Depth != 0 && StructRequired(sourceNode))
             {
-                if (StructRequired(sourceNode))
-                    sourceNode.Local = IL.DeclareLocal(sourceNode.Type);
+                sourceNode.Local = IL.DeclareLocal(sourceNode.Type);
             }
         }
 
@@ -382,9 +381,6 @@ namespace Statics.Mapper.Internal
             IL.EmitLoadMemberValue(destinationNodeMember);
         }
 
-        private void Load(DestinationNode destinationNode, DestinationNodeMember destinationNodeMember) =>
-            Load(destinationNode, destinationNodeMember.Info);
-
         #endregion
 
         #region Set
@@ -527,8 +523,6 @@ namespace Statics.Mapper.Internal
         {
             if (!sourceNode.Load)
                 return false;
-
-            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 1).ToList();
 
             return Schema.DestinationNodes.Any(n =>
                 n.Load &&
@@ -801,12 +795,8 @@ namespace Statics.Mapper.Internal
 
             foreach (DestinationNodeMember destinationNodeMember in destinationNodeMembers)
             {
-                if (destinationNodeMember.Info.IsStatic)
-                {
-                    loadAndSetQueue.Add(destinationNodeMember);
-                    continue;
-                }
-                else if (destinationNodeMember.IsCollection)
+                if (destinationNodeMember.Info.IsStatic ||
+                    destinationNodeMember.IsCollection)
                 {
                     loadAndSetQueue.Add(destinationNodeMember);
                     continue;
