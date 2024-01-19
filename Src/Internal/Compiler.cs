@@ -34,7 +34,7 @@ namespace Statics.Mapper.Internal
             MethodType = methodType;
         }
 
-        private protected void CheckArguments()
+        private protected void Evaluate()
         {
             if (!Schema.CanMapTypes(SourceType, DestinationType))
                 throw new NotSupportedException($"Mapping from {SourceType} to {DestinationType} not supported.");

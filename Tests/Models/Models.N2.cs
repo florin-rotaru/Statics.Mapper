@@ -1,5 +1,5 @@
 
-namespace Models.Tests
+namespace Models
 {
 	#region C2C1C0 Class with Class Node
 	public class TC2C1C0_I0_Members { public TC1C0_I0_Members N1 { get; set; } }

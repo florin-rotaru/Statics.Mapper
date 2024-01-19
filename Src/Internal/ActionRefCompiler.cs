@@ -279,7 +279,7 @@ namespace Statics.Mapper.Internal
 
         private void CompileMethod(bool debug)
         {
-            CheckArguments();
+            Evaluate();
 
             CreateSignature(debug);
             CreateSchema();
