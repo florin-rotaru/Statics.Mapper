@@ -2,7 +2,7 @@
 using Models;
 using Xunit;
 
-namespace Playground.Tests
+namespace Mapper.UnitTests
 {
     [Collection(nameof(EmptyTypes))]
     public class EmptyTypes

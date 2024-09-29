@@ -6,35 +6,28 @@ using System.Reflection.Emit;
 
 namespace Statics.Mapper.Internal
 {
-    internal partial class Compiler
+    internal partial class Compiler(
+        Type sourceType,
+        Type destinationType,
+        MethodType methodType)
     {
-        private protected Type SourceType { get; set; }
-        private protected Type DestinationType { get; set; }
-        private protected MethodType MethodType { get; set; }
-        private protected IEnumerable<IMapOption> MapOptions { get; set; }
-        private protected Reflection.Emit.ILGenerator IL { get; set; }
-        private protected Schema Schema { get; set; }
+        protected Type SourceType { get; set; } = sourceType;
+        protected Type DestinationType { get; set; } = destinationType;
+        protected MethodType MethodType { get; set; } = methodType;
+        protected List<IMapperOptionArguments>? MapOptions { get; set; }
+        protected IL IL { get; set; }
+        protected Schema Schema { get; set; }
 
-        private const char DOT = '.';
-        private const string Map = nameof(Map);
-        private const string To = nameof(To);
-        private const string ToArray = nameof(ToArray);
-        private const string CreateRange = nameof(CreateRange);
+        const char DOT = '.';
+        const string Map = nameof(Map);
+        const string To = nameof(To);
+        const string ToArray = nameof(ToArray);
+        const string CreateRange = nameof(CreateRange);
 
-        private protected const string HasValue = nameof(HasValue);
-        private protected const string Value = nameof(Value);
+        protected const string HasValue = nameof(HasValue);
+        protected const string Value = nameof(Value);
 
-        public Compiler(
-            Type sourceType,
-            Type destinationType,
-            MethodType methodType)
-        {
-            SourceType = sourceType;
-            DestinationType = destinationType;
-            MethodType = methodType;
-        }
-
-        private protected void Evaluate()
+        protected void Evaluate()
         {
             if (!Schema.CanMapTypes(SourceType, DestinationType))
                 throw new NotSupportedException($"Mapping from {SourceType} to {DestinationType} not supported.");
@@ -42,10 +35,10 @@ namespace Statics.Mapper.Internal
 
         #region Schema
 
-        private protected void CreateSchema()
+        protected void CreateSchema()
         {
             if (Collections.IsCollection(DestinationType) ||
-                Reflection.TypeInfo.IsBuiltIn(DestinationType) ||
+                MapperTypeInfo.IsBuiltIn(DestinationType) ||
                 DestinationType.IsAbstract ||
                 DestinationType.IsInterface)
                 return;
@@ -53,13 +46,13 @@ namespace Statics.Mapper.Internal
             Schema = new Schema(SourceType, DestinationType, MapOptions);
         }
 
-        private static IEnumerable<SourceNode> GetDestinationNodeSources(DestinationNode destinationNode)
+        static List<SourceNode> GetDestinationNodeSources(DestinationNode destinationNode)
         {
-            List<SourceNode> returnValue = new();
+            List<SourceNode> returnValue = [];
 
             if (destinationNode.UseMapper)
             {
-                if (destinationNode.SourceNode.Depth != 0)
+                if (destinationNode.SourceNode?.Depth != 0 && destinationNode.SourceNode?.ParentNode != null)
                     returnValue.Add(destinationNode.SourceNode.ParentNode);
             }
             else
@@ -72,7 +65,7 @@ namespace Statics.Mapper.Internal
 
             for (int i = 0; i < returnValue.Count; i++)
             {
-                SourceNode parentNode = returnValue[i].ParentNode;
+                SourceNode? parentNode = returnValue[i].ParentNode;
 
                 while (parentNode != null)
                 {
@@ -86,22 +79,22 @@ namespace Statics.Mapper.Internal
             return returnValue;
         }
 
-        private static IEnumerable<DestinationNode> GetDistinctNodes(IEnumerable<DestinationNode> destinationNodes)
+        static List<DestinationNode> GetDistinctNodes(IEnumerable<DestinationNode> destinationNodes)
         {
-            List<DestinationNode> returnValue = new();
+            List<DestinationNode> distinctNodes = [];
 
             foreach (DestinationNode destinationNode in destinationNodes)
-                if (!returnValue.Exists(n => n.Name == destinationNode.Name))
-                    returnValue.Add(destinationNode);
+                if (!distinctNodes.Exists(n => n.Name == destinationNode.Name))
+                    distinctNodes.Add(destinationNode);
 
-            return returnValue;
+            return distinctNodes;
         }
 
         #endregion
 
         #region Declare Locals
 
-        private void DeclareSourceNodeLocals(SourceNode sourceNode)
+        void DeclareSourceNodeLocals(SourceNode sourceNode)
         {
             if (sourceNode.Local != null ||
                 sourceNode.NullableLocal != null)
@@ -122,13 +115,13 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void DeclareSourceNodesLocals(IEnumerable<SourceNode> sourceNodes)
+        void DeclareSourceNodesLocals(IEnumerable<SourceNode> sourceNodes)
         {
             foreach (SourceNode sourceNode in sourceNodes)
                 DeclareSourceNodeLocals(sourceNode);
         }
 
-        private void DeclareDestinationNodeLocals(DestinationNode destinationNode)
+        void DeclareDestinationNodeLocals(DestinationNode destinationNode)
         {
             if (destinationNode.Local != null ||
                 destinationNode.NullableLocal != null)
@@ -178,15 +171,15 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private bool UseDestinationLocals() =>
+        bool UseDestinationLocals() =>
             !(
                 Collections.IsCollection(DestinationType) ||
-                Reflection.TypeInfo.IsBuiltIn(DestinationType) ||
+                MapperTypeInfo.IsBuiltIn(DestinationType) ||
                 DestinationType.IsAbstract ||
                 DestinationType.IsInterface
             );
 
-        private protected void DeclareLocals()
+        protected void DeclareLocals()
         {
             if (!UseDestinationLocals())
                 return;
@@ -202,7 +195,7 @@ namespace Statics.Mapper.Internal
                 });
         }
 
-        private protected void InitDestinationLocals()
+        protected void InitDestinationLocals()
         {
             if (!UseDestinationLocals())
                 return;
@@ -220,7 +213,7 @@ namespace Statics.Mapper.Internal
 
         #region Load
 
-        private void Load(SourceNode sourceNode)
+        void Load(SourceNode sourceNode)
         {
             if (sourceNode.Depth == 0)
             {
@@ -240,8 +233,8 @@ namespace Statics.Mapper.Internal
                 return;
             }
 
-            Reflection.MemberInfo memberInfo =
-                sourceNode.ParentNode.Members.First(w => w.Name == Reflection.TypeInfo.GetName(sourceNode.Name));
+            MapperTypeMemberInfo memberInfo =
+                sourceNode.ParentNode.Members.First(w => w.Name == MapperTypeInfo.GetName(sourceNode.Name));
 
             if (memberInfo.IsStatic)
             {
@@ -257,7 +250,7 @@ namespace Statics.Mapper.Internal
                 if (parentNode.Local != null)
                     LoadLocal(parentNode.Local, true);
                 else if (parentNode.IsStatic)
-                    IL.EmitLoadMemberValue(parentNode.MemberInfo);
+                    IL.EmitLoadMemberValue(parentNode.Member);
 
                 if (parentNode.IsStatic || parentNode.Local != null)
                 {
@@ -281,7 +274,7 @@ namespace Statics.Mapper.Internal
                 IL.EmitLoadMemberValue(Schema.GetMember(string.Join(DOT, segments, 0, i + 1), Schema.SourceNodes));
         }
 
-        private void Load(SourceNode sourceNode, Reflection.MemberInfo sourceNodeMember)
+        void Load(SourceNode sourceNode, MapperTypeMemberInfo sourceNodeMember)
         {
             if (!sourceNodeMember.IsStatic)
                 Load(sourceNode);
@@ -289,7 +282,7 @@ namespace Statics.Mapper.Internal
             IL.EmitLoadMemberValue(sourceNodeMember);
         }
 
-        private void LoadLocal(LocalBuilder local, bool loadAddress)
+        void LoadLocal(LocalBuilder local, bool loadAddress)
         {
             if (loadAddress)
                 IL.EmitLdloca(local.LocalIndex);
@@ -297,7 +290,7 @@ namespace Statics.Mapper.Internal
                 IL.EmitLdloc(local.LocalIndex);
         }
 
-        private void Load(DestinationNode destinationNode)
+        void Load(DestinationNode destinationNode)
         {
             if (destinationNode.Depth == 0)
             {
@@ -332,8 +325,8 @@ namespace Statics.Mapper.Internal
                 return;
             }
 
-            Reflection.MemberInfo memberInfo =
-                destinationNode.ParentNode.Members.First(w => w.Info.Name == Reflection.TypeInfo.GetName(destinationNode.Name)).Info;
+            MapperTypeMemberInfo memberInfo =
+                destinationNode.ParentNode.Members.First(w => w.Info.Name == MapperTypeInfo.GetName(destinationNode.Name)).Info;
 
             if (memberInfo.IsStatic)
             {
@@ -349,7 +342,7 @@ namespace Statics.Mapper.Internal
                 if (parentNode.Local != null)
                     LoadLocal(parentNode.Local, parentNode.Local.LocalType.IsValueType);
                 else if (parentNode.IsStatic)
-                    IL.EmitLoadMemberValue(parentNode.MemberInfo);
+                    IL.EmitLoadMemberValue(parentNode.Member);
 
                 if (parentNode.IsStatic || parentNode.Local != null)
                 {
@@ -373,7 +366,7 @@ namespace Statics.Mapper.Internal
                 IL.EmitLoadMemberValue(Schema.GetMember(string.Join(DOT, segments, 0, i + 1), Schema.DestinationNodes));
         }
 
-        private void Load(DestinationNode destinationNode, Reflection.MemberInfo destinationNodeMember)
+        void Load(DestinationNode destinationNode, MapperTypeMemberInfo destinationNodeMember)
         {
             if (!destinationNodeMember.IsStatic)
                 Load(destinationNode);
@@ -385,7 +378,7 @@ namespace Statics.Mapper.Internal
 
         #region Set
 
-        private void StoreDestinationRootNode()
+        void StoreDestinationRootNode()
         {
             if (MethodType == MethodType.ActionRef)
                 return;
@@ -397,7 +390,7 @@ namespace Statics.Mapper.Internal
                 IL.EmitStloc(Schema.DestinationRootNode.Local.LocalIndex);
         }
 
-        private void SetDestinationNode(DestinationNode destinationNode)
+        void SetDestinationNode(DestinationNode destinationNode)
         {
             if (destinationNode.ParentNode == null ||
                 !destinationNode.Type.IsValueType)
@@ -405,7 +398,7 @@ namespace Statics.Mapper.Internal
 
             if (destinationNode.UseMapper && MethodType == MethodType.Function)
             {
-                IL.EmitSetMemberValue(destinationNode.MemberInfo);
+                IL.EmitSetMemberValue(destinationNode.Member);
                 return;
             }
 
@@ -442,12 +435,12 @@ namespace Statics.Mapper.Internal
             if (destinationNode.NullableUnderlyingType != null && !destinationNode.UseMapper)
                 IL.Emit(OpCodes.Newobj, destinationNode.Type.GetConstructor(new Type[] { destinationNode.NullableUnderlyingType }));
 
-            IL.EmitSetMemberValue(destinationNode.MemberInfo);
+            IL.EmitSetMemberValue(destinationNode.Member);
         }
 
-        private void SetDestinationNodes(IEnumerable<DestinationNode> destinationNodes)
+        void SetDestinationNodes(List<DestinationNode> destinationNodes)
         {
-            List<DestinationNode> nodes = GetDistinctNodes(destinationNodes).ToList();
+            List<DestinationNode> nodes = GetDistinctNodes(destinationNodes);
 
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -466,7 +459,7 @@ namespace Statics.Mapper.Internal
                 SetDestinationNode(nodes[i]);
         }
 
-        private void SetDestinationNodeMembers(
+        void SetDestinationNodeMembers(
             DestinationNode destinationNode,
             IEnumerable<DestinationNodeMember> destinationNodeMembers)
         {
@@ -495,7 +488,7 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void LoadAndSetDestinationNodeMembers(
+        void LoadAndSetDestinationNodeMembers(
             DestinationNode destinationNode,
             IEnumerable<DestinationNodeMember> destinationNodeMembers)
         {
@@ -519,7 +512,7 @@ namespace Statics.Mapper.Internal
 
         #endregion
 
-        private protected bool MapsNodeMembers(SourceNode sourceNode)
+        protected bool MapsNodeMembers(SourceNode sourceNode)
         {
             if (!sourceNode.Load)
                 return false;
@@ -530,12 +523,12 @@ namespace Statics.Mapper.Internal
                 n.Members.Any(m => m.Map && m.SourceNode.Name == sourceNode.Name));
         }
 
-        private protected bool MapsNodesMembers(SourceNode sourceNode)
+        protected bool MapsNodesMembers(SourceNode sourceNode)
         {
             if (!sourceNode.Load)
                 return false;
 
-            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 0).ToList();
+            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 0);
 
             return Schema.DestinationNodes.Any(n =>
                 n.Load &&
@@ -551,9 +544,9 @@ namespace Statics.Mapper.Internal
                 ));
         }
 
-        private protected bool StructRequired(SourceNode sourceNode)
+        protected bool StructRequired(SourceNode sourceNode)
         {
-            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, (n) => n.Load, 1).ToList();
+            List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, (n) => n.Load, 1);
 
             return childNodes.Exists(n => !n.IsStatic) ||
                 Schema.DestinationNodes.Any(n =>
@@ -564,7 +557,7 @@ namespace Statics.Mapper.Internal
                         !m.SourceNodeMember.IsStatic));
         }
 
-        private void MapDestinationNodeMembers(
+        void MapDestinationNodeMembers(
             SourceNode sourceNode,
             DestinationNode destinationNode,
             IEnumerable<DestinationNodeMember> destinationNodeMembers)
@@ -573,7 +566,7 @@ namespace Statics.Mapper.Internal
             SetDestinationNodeMembers(destinationNode, destinationNodeMembers);
         }
 
-        private protected void MapSourceNodes(SourceNode sourceNode)
+        protected void MapSourceNodes(SourceNode sourceNode)
         {
             if (!MapsNodesMembers(sourceNode))
                 return;
@@ -584,7 +577,7 @@ namespace Statics.Mapper.Internal
             }
             else if (sourceNode.NullableUnderlyingType != null)
             {
-                Load(sourceNode.ParentNode, sourceNode.MemberInfo);
+                Load(sourceNode.ParentNode, sourceNode.Member);
                 IL.EmitStloc(sourceNode.NullableLocal.LocalIndex);
                 LoadLocal(sourceNode.NullableLocal, true);
                 IL.Emit(OpCodes.Call, sourceNode.NullableLocal.LocalType.GetProperty(HasValue).GetGetMethod());
@@ -605,7 +598,7 @@ namespace Statics.Mapper.Internal
             {
                 if (StructRequired(sourceNode))
                 {
-                    Load(sourceNode.ParentNode, sourceNode.MemberInfo);
+                    Load(sourceNode.ParentNode, sourceNode.Member);
                     IL.EmitStloc(sourceNode.Local.LocalIndex);
                 }
 
@@ -618,7 +611,7 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void MapSourceChildNodes(SourceNode sourceNode, ref List<DestinationNode> destinationNodes)
+        void MapSourceChildNodes(SourceNode sourceNode, ref List<DestinationNode> destinationNodes)
         {
             IEnumerable<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 1);
             foreach (SourceNode childNode in childNodes)
@@ -638,9 +631,9 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void MapSourceNode(SourceNode sourceNode)
+        void MapSourceNode(SourceNode sourceNode)
         {
-            List<DestinationNode> destinationNodes = new();
+            List<DestinationNode> destinationNodes = [];
 
             Schema.ForEachDestinationNode(
                 n => n.Load,
@@ -663,7 +656,7 @@ namespace Statics.Mapper.Internal
             SetDestinationNodes(destinationNodes);
         }
 
-        private protected void Init(DestinationNode destinationNode)
+        protected void Init(DestinationNode destinationNode)
         {
             if (destinationNode.Depth != 0)
             {
@@ -672,13 +665,13 @@ namespace Statics.Mapper.Internal
                 else if (destinationNode.IsStatic)
                 {
                     IL.EmitInit(destinationNode.Type);
-                    IL.EmitSetMemberValue(destinationNode.MemberInfo);
+                    IL.EmitSetMemberValue(destinationNode.Member);
                 }
                 else
                 {
                     Load(destinationNode.ParentNode);
                     IL.EmitInit(destinationNode.Type);
-                    IL.EmitSetMemberValue(destinationNode.MemberInfo);
+                    IL.EmitSetMemberValue(destinationNode.Member);
                 }
 
                 destinationNode.Loaded = true;
@@ -729,7 +722,7 @@ namespace Statics.Mapper.Internal
             destinationNode.Loaded = true;
         }
 
-        private protected void InitIfNull(DestinationNode destinationNode)
+        protected void InitIfNull(DestinationNode destinationNode)
         {
             if (destinationNode.Depth != 0)
             {
@@ -737,7 +730,7 @@ namespace Statics.Mapper.Internal
                 else if (destinationNode.Type.IsValueType) { }
                 else if (destinationNode.IsStatic)
                 {
-                    IL.EmitLoadMemberValue(destinationNode.MemberInfo);
+                    IL.EmitLoadMemberValue(destinationNode.Member);
                     IL.EmitBrtrue_s(() => Init(destinationNode));
                 }
                 else
@@ -772,7 +765,7 @@ namespace Statics.Mapper.Internal
         /// </summary>
         /// <param name="destinationNode"></param>
         /// <param name="destinationNodeMembers"></param>
-        private void InitAndSetDestinationNodeMembers(
+        void InitAndSetDestinationNodeMembers(
             DestinationNode destinationNode,
             IEnumerable<DestinationNodeMember> destinationNodeMembers)
         {
@@ -811,7 +804,7 @@ namespace Statics.Mapper.Internal
             }
 
             if (destinationNode.Depth != 0)
-                IL.EmitSetMemberValue(destinationNode.MemberInfo);
+                IL.EmitSetMemberValue(destinationNode.Member);
             else
                 StoreDestinationRootNode();
 
@@ -819,7 +812,7 @@ namespace Statics.Mapper.Internal
                 LoadAndSetDestinationNodeMembers(destinationNode, loadAndSetQueue);
         }
 
-        private void EnsureDestinationNodePath(DestinationNode destinationNode, SourceNode sourceNode)
+        void EnsureDestinationNodePath(DestinationNode destinationNode, SourceNode sourceNode)
         {
             if (destinationNode.Depth == 0)
                 return;
@@ -854,7 +847,7 @@ namespace Statics.Mapper.Internal
             sourceNode.DestinationNodes.Add(destinationNode);
         }
 
-        private void EnsureDestinationNode(DestinationNode destinationNode)
+        void EnsureDestinationNode(DestinationNode destinationNode)
         {
             if (destinationNode.Depth == 0)
             {
@@ -864,7 +857,7 @@ namespace Statics.Mapper.Internal
 
             if (destinationNode.NullableUnderlyingType != null)
             {
-                Load(destinationNode.ParentNode, destinationNode.MemberInfo);
+                Load(destinationNode.ParentNode, destinationNode.Member);
                 IL.EmitStloc(destinationNode.NullableLocal.LocalIndex);
                 LoadLocal(destinationNode.NullableLocal, true);
                 IL.Emit(OpCodes.Call, destinationNode.Type.GetProperty(HasValue).GetGetMethod());
@@ -884,7 +877,7 @@ namespace Statics.Mapper.Internal
             }
             else if (destinationNode.Type.IsValueType)
             {
-                Load(destinationNode.ParentNode, destinationNode.MemberInfo);
+                Load(destinationNode.ParentNode, destinationNode.Member);
                 IL.EmitStloc(destinationNode.Local.LocalIndex);
             }
             else
@@ -895,7 +888,7 @@ namespace Statics.Mapper.Internal
             destinationNode.Loaded = true;
         }
 
-        private void MapperMapFunc(DestinationNode destinationNode)
+        void MapperMapFunc(DestinationNode destinationNode)
         {
             SourceNode sourceNode = destinationNode.SourceNode;
             EnsureDestinationNodePath(destinationNode, sourceNode);
@@ -913,20 +906,20 @@ namespace Statics.Mapper.Internal
 
             if (destinationNode.Type.IsValueType)
             {
-                Load(sourceNode.ParentNode, sourceNode.MemberInfo);
+                Load(sourceNode.ParentNode, sourceNode.Member);
                 IL.Emit(OpCodes.Call, method);
             }
             else
             {
-                Load(sourceNode.ParentNode, sourceNode.MemberInfo);
+                Load(sourceNode.ParentNode, sourceNode.Member);
                 IL.Emit(OpCodes.Call, method);
-                IL.EmitSetMemberValue(destinationNode.MemberInfo);
+                IL.EmitSetMemberValue(destinationNode.Member);
             }
 
             SetDestinationNode(destinationNode);
         }
 
-        private void MapperMapActionRef(DestinationNode destinationNode)
+        void MapperMapActionRef(DestinationNode destinationNode)
         {
             SourceNode sourceNode = destinationNode.SourceNode;
             EnsureDestinationNodePath(destinationNode, sourceNode);
@@ -942,20 +935,20 @@ namespace Statics.Mapper.Internal
 
             if (!destinationNode.IsStatic)
                 Load(destinationNode.ParentNode);
-            IL.EmitLoadMemberValue(destinationNode.MemberInfo);
+            IL.EmitLoadMemberValue(destinationNode.Member);
             IL.EmitStloc(destinationNode.NullableLocal != null ? destinationNode.NullableLocal.LocalIndex : destinationNode.Local.LocalIndex);
 
-            Load(sourceNode.ParentNode, sourceNode.MemberInfo);
+            Load(sourceNode.ParentNode, sourceNode.Member);
             LoadLocal(destinationNode.NullableLocal ?? destinationNode.Local, true);
             IL.Emit(OpCodes.Call, method);
 
             if (!destinationNode.IsStatic)
                 Load(destinationNode.ParentNode);
             LoadLocal(destinationNode.NullableLocal ?? destinationNode.Local, false);
-            IL.EmitSetMemberValue(destinationNode.MemberInfo);
+            IL.EmitSetMemberValue(destinationNode.Member);
         }
 
-        private void MapperMap(DestinationNode destinationNode)
+        void MapperMap(DestinationNode destinationNode)
         {
             if (MethodType == MethodType.Function)
                 MapperMapFunc(destinationNode);

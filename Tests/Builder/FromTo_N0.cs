@@ -12,8 +12,8 @@ namespace Internal
 {
     public class FromTo_N0<S> where S : new()
     {
-        private readonly ITestOutputHelper Console;
-        private Fixture Fixture { get; }
+        readonly ITestOutputHelper Console;
+        Fixture Fixture { get; }
 
         public FromTo_N0(ITestOutputHelper console)
         {
@@ -21,7 +21,7 @@ namespace Internal
             Fixture = new Fixture();
         }
 
-        private S NewSource(bool int32MemberOnly = false)
+        S NewSource(bool int32MemberOnly = false)
         {
             var members = int32MemberOnly ?
                 new TC0_I0_Members { Int32Member = Fixture.Create<int>() } :
@@ -43,7 +43,7 @@ namespace Internal
             return source;
         }
 
-        private S[] NewSourceArray()
+        S[] NewSourceArray()
         {
             S[] array = new S[3];
             for (int i = 0; i < 3; i++)
@@ -52,15 +52,15 @@ namespace Internal
             return array;
         }
 
-        private static S DefaultSource() => default;
+        static S DefaultSource() => default;
 
-        private static bool CanSerialize<D>(S source, D destination)
+        static bool CanSerialize<D>(S source, D destination)
         {
             return JsonConvert.SerializeObject(source) != null &&
                 JsonConvert.SerializeObject(destination) != null;
         }
 
-        private static void AssertInstanceOrDefaultReadonly<D>(S source, D destination) where D : new()
+        static void AssertInstanceOrDefaultReadonly<D>(S source, D destination) where D : new()
         {
             Assert.True(CanSerialize(source, destination));
 
@@ -79,7 +79,7 @@ namespace Internal
             }
         }
 
-        private static void AssertEqualsOrDefault<D>(
+        static void AssertEqualsOrDefault<D>(
            S[] source,
            D[] destination,
            bool hasReadonlyMembers,
@@ -92,7 +92,7 @@ namespace Internal
                 AssertEqualsOrDefault(source[i], destination[i], hasReadonlyMembers);
         }
 
-        private static void AssertEqualsOrDefault<D>(
+        static void AssertEqualsOrDefault<D>(
             S source,
             D destination,
             bool hasReadonlyMembers) where D : new()
@@ -111,7 +111,7 @@ namespace Internal
                 Assert.True(CompareEquals(source, destination));
         }
 
-        private static void AssertDefault<D>(
+        static void AssertDefault<D>(
             S source,
             D destination,
             bool hasReadonlyMembers) where D : new()
@@ -148,14 +148,14 @@ namespace Internal
             }
         }
 
-        private static object MemberValue<T>(T source, string memberName)
+        static object MemberValue<T>(T source, string memberName)
         {
             return Statics.Reflection.TypeInfo.GetMembers(typeof(T), true)
                 .First(m => m.Name == memberName)
                 .GetValue(source);
         }
 
-        private static void AssertIntToStringEquals<D>(S source, D destination)
+        static void AssertIntToStringEquals<D>(S source, D destination)
         {
             Assert.True(
                 CompareEquals(
@@ -165,7 +165,7 @@ namespace Internal
                     useConvert: true));
         }
 
-        private static void AssertDefaultStringMemberValue<D>(S source, D destination) where D : new()
+        static void AssertDefaultStringMemberValue<D>(S source, D destination) where D : new()
         {
             if (Nullable.GetUnderlyingType(typeof(S)) != null)
             {
@@ -194,7 +194,7 @@ namespace Internal
             }
         }
 
-        private static void AssertIntToDecimalEquals<D>(S source, D destination)
+        static void AssertIntToDecimalEquals<D>(S source, D destination)
         {
             Assert.True(
                 CompareEquals(
@@ -204,7 +204,7 @@ namespace Internal
                     useConvert: true));
         }
 
-        private static void AssertDefaultDecimalMemberValue<D>(S source, D destination) where D : new()
+        static void AssertDefaultDecimalMemberValue<D>(S source, D destination) where D : new()
         {
             if (Nullable.GetUnderlyingType(typeof(S)) != null)
             {
@@ -239,7 +239,7 @@ namespace Internal
             }
         }
 
-        private void MapperConvert<D>(bool hasReadonlyMembers) where D : new()
+        void MapperConvert<D>(bool hasReadonlyMembers) where D : new()
         {
             if (hasReadonlyMembers)
             {

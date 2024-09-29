@@ -142,7 +142,7 @@ namespace Builder
 
                 builder
                     .AppendLine()
-                    .AppendLine($"namespace {nameof(Models)}.Tests")
+                    .AppendLine($"namespace {nameof(Models)}")
                     .AppendLine("{");
 
                 foreach (var modelTemplate in TModels)

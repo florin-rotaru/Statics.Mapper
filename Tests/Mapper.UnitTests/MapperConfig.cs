@@ -5,12 +5,12 @@ using System.Collections.Generic;
 using Xunit;
 using static Statics.Compare.Members;
 
-namespace Playground.Tests
+namespace Mapper.UnitTests
 {
     [Collection(nameof(MapperConfig))]
     public class MapperConfig
     {
-        private Fixture Fixture { get; }
+        Fixture Fixture { get; }
 
         public MapperConfig()
         {
@@ -132,7 +132,7 @@ namespace Playground.Tests
             Assert.Equal(source.N0.Int32Member, destination.N0.Int32Member);
             Assert.Null(destination.N0.StringMember);
 
-            MapperConfig<TC1C0_I0_Members_Local, TC1C0_I0_Members_Local>.ClearMap();
+            MapperConfig<TC1C0_I0_Members_Local, TC1C0_I0_Members_Local>.ResetMap();
 
             destination = Mapper<TC1C0_I0_Members_Local, TC1C0_I0_Members_Local>.Map(source);
             Assert.True(CompareEquals(source, destination));

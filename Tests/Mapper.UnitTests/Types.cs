@@ -9,14 +9,14 @@ using Xunit;
 using Xunit.Abstractions;
 using static Statics.Compare.Members;
 
-namespace Playground.Tests
+namespace Mapper.UnitTests
 {
     [Collection(nameof(Types))]
     public class Types
     {
-        private readonly ITestOutputHelper Console;
+        readonly ITestOutputHelper Console;
 
-        private Fixture Fixture { get; }
+        Fixture Fixture { get; }
 
         public Types(ITestOutputHelper console)
         {

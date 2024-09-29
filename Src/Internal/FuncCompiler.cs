@@ -7,13 +7,24 @@ namespace Statics.Mapper.Internal
 {
     internal class FuncCompiler : Compiler
     {
-        public FuncCompiler(Type sourceType, Type destinationType, MethodType methodType) :
+        protected DynamicMethod CompiledMethod { get; set; }
+
+        public FuncCompiler(
+            Type sourceType,
+            Type destinationType,
+            MethodType methodType) :
             base(sourceType, destinationType, methodType)
-        { }
+        {
+            CompiledMethod = new DynamicMethod(
+                $"{nameof(Statics)}{Guid.NewGuid():N}",
+                DestinationType,
+                [SourceType],
+                typeof(Mapper<,>).MakeGenericType(SourceType, DestinationType).Module,
+                skipVisibility: true);
+            IL = new IL(CompiledMethod.GetILGenerator());
+        }
 
-        private protected DynamicMethod Method { get; set; }
-
-        private void SetAndReturnDestinationRootNode()
+        void SetAndReturnDestinationRootNode()
         {
             if (Schema.SourceRootNode.NullableUnderlyingType != null &&
                 StructRequired(Schema.SourceRootNode))
@@ -35,7 +46,7 @@ namespace Statics.Mapper.Internal
             ReturnDestinationRootNode();
         }
 
-        private void ReturnNewInstanceOrDefault()
+        void ReturnNewInstanceOrDefault()
         {
             DestinationNode destinationNode = Schema.DestinationRootNode;
             SourceNode sourceNode = Schema.SourceRootNode;
@@ -69,7 +80,7 @@ namespace Statics.Mapper.Internal
                     IL.EmitLoadLocal(destinationNode.NullableLocal, true);
                     IL.EmitInit(destinationNode.Local);
                     IL.EmitLoadLocal(destinationNode.Local, false);
-                    IL.Emit(OpCodes.Call, destinationNode.Type.GetConstructor(new Type[] { destinationNode.NullableUnderlyingType }));
+                    IL.Emit(OpCodes.Call, destinationNode.Type.GetConstructor([destinationNode.NullableUnderlyingType]));
                 }
                 else if (!destinationNode.Type.IsValueType)
                 {
@@ -89,7 +100,7 @@ namespace Statics.Mapper.Internal
             {
                 IL.EmitLoadArgument(sourceNode.Type, 0);
                 IL.Emit(OpCodes.Call, sourceNode.Type.GetProperty(HasValue).GetGetMethod());
-                IL.EmitBrfalse_s(() => newInstance());
+                IL.EmitBrfalse_s(newInstance);
 
                 loadDestination();
             }
@@ -102,7 +113,7 @@ namespace Statics.Mapper.Internal
             else
             {
                 IL.EmitLoadArgument(sourceNode.Type, 0);
-                IL.EmitBrfalse_s(() => newInstance());
+                IL.EmitBrfalse_s(newInstance);
 
                 loadDestination();
             }
@@ -110,7 +121,7 @@ namespace Statics.Mapper.Internal
             IL.Emit(OpCodes.Ret);
         }
 
-        private void SetDefaultDestinationRootNode()
+        void SetDefaultDestinationRootNode()
         {
             bool setNewDestinationRootNodeInstance = false;
 
@@ -151,7 +162,7 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void ReturnDefault()
+        void ReturnDefault()
         {
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
             {
@@ -182,7 +193,7 @@ namespace Statics.Mapper.Internal
             IL.Emit(OpCodes.Ret);
         }
 
-        private void ReturnDestinationRootNode()
+        void ReturnDestinationRootNode()
         {
             if (Schema.DestinationRootNode.NullableUnderlyingType != null)
             {
@@ -198,11 +209,7 @@ namespace Statics.Mapper.Internal
                     IL.EmitLdloc(Schema.DestinationRootNode.Local.LocalIndex);
                 }
 
-                IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetConstructor(new Type[] { Schema.DestinationRootNode.NullableUnderlyingType }));
-            }
-
-            if (Schema.DestinationRootNode.NullableUnderlyingType != null)
-            {
+                IL.Emit(OpCodes.Call, Schema.DestinationRootNode.Type.GetConstructor([Schema.DestinationRootNode.NullableUnderlyingType]));
                 IL.EmitLdloc(Schema.DestinationRootNode.NullableLocal.LocalIndex);
             }
             else
@@ -221,25 +228,14 @@ namespace Statics.Mapper.Internal
             IL.Emit(OpCodes.Ret);
         }
 
-        private void CreateSignature(bool debug)
-        {
-            Method = new DynamicMethod(
-                $"{nameof(Statics)}{Guid.NewGuid():N}",
-                DestinationType,
-                new[] { SourceType },
-                typeof(Mapper<,>).MakeGenericType(SourceType, DestinationType).Module,
-                skipVisibility: true);
-            IL = new Reflection.Emit.ILGenerator(Method.GetILGenerator(), debug);
-        }
-
-        private void SetAndReturnFromToBuiltIn()
+        void SetAndReturnFromToBuiltIn()
         {
             IL.EmitLdarg(0);
             IL.EmitConvert(SourceType, DestinationType);
             IL.Emit(OpCodes.Ret);
         }
 
-        private void CreateBody()
+        void CreateBody()
         {
             #region Destination: Collection
 
@@ -267,7 +263,7 @@ namespace Statics.Mapper.Internal
 
             #region Source: BuiltIn
 
-            if (Reflection.TypeInfo.IsBuiltIn(SourceType))
+            if (MapperTypeInfo.IsBuiltIn(SourceType))
             {
                 SetAndReturnFromToBuiltIn();
 
@@ -329,28 +325,29 @@ namespace Statics.Mapper.Internal
             #endregion
         }
 
-        private void CompileMethod(bool debug)
+        DynamicMethod CompileMethod()
         {
             Evaluate();
 
-            CreateSignature(debug);
             CreateSchema();
             DeclareLocals();
             InitDestinationLocals();
             CreateBody();
+
+            return CompiledMethod;
         }
 
-        public DynamicMethod Compile(IEnumerable<IMapOption> mapOptions = null)
+        public DynamicMethod Compile(List<IMapperOptionArguments>? mapOptions = null)
         {
             MapOptions = mapOptions;
-            CompileMethod(false);
-            return Method;
+            return CompileMethod();
         }
 
-        public string ViewIL(IEnumerable<IMapOption> mapOptions = null)
+        public string ViewIL(List<IMapperOptionArguments>? mapOptions = null)
         {
             MapOptions = mapOptions;
-            CompileMethod(true);
+            IL = new IL(CompiledMethod.GetILGenerator(), true);
+            CompileMethod();
             return IL.GetLog().ToString();
         }
     }

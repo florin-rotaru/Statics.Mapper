@@ -1,8 +1,7 @@
-using Models;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Internal
+namespace Models.Internal
 {
     public class FromTo_N1_Static_Members<S> : FromTo_N1<S> where S : new()
     {

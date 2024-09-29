@@ -5,8 +5,8 @@ namespace Statics.Mapper.Internal
 {
     internal class CollectionInfo
     {
-        public DestinationNode DestinationNode { get; }
-        public DestinationNodeMember DestinationNodeMember { get; }
+        public DestinationNode? DestinationNode { get; }
+        public DestinationNodeMember? DestinationNodeMember { get; }
         public Type SourceType { get; }
         public Type DestinationType { get; }
 
@@ -15,15 +15,15 @@ namespace Statics.Mapper.Internal
 
         public bool UseArrayCopyTo { get; }
 
-        public LocalBuilder SourceLocal { get; set; }
-        public LocalBuilder DestinationLocal { get; set; }
+        public LocalBuilder? SourceLocal { get; set; }
+        public LocalBuilder? DestinationLocal { get; set; }
 
-        public LocalBuilder LoopIndex { get; set; }
-        public LocalBuilder LoopLength { get; set; }
+        public LocalBuilder? LoopIndex { get; set; }
+        public LocalBuilder? LoopLength { get; set; }
 
-        public LocalBuilder SourceLocalEnumerator { get; set; }
+        public LocalBuilder? SourceLocalEnumerator { get; set; }
 
-        public LocalBuilder MapperMapMethodLocal { get; set; }
+        public LocalBuilder? MapperMapMethodLocal { get; set; }
 
 
         public CollectionInfo(Type sourceType, Type destinationType)
@@ -36,7 +36,7 @@ namespace Statics.Mapper.Internal
                 sourceType == destinationType &&
                 (
                     SourceArgument.IsValueType ||
-                    Reflection.TypeInfo.IsBuiltIn(SourceArgument)
+                    MapperTypeInfo.IsBuiltIn(SourceArgument)
                 );
         }
 

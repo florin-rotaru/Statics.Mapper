@@ -9,39 +9,26 @@ namespace Statics.Mapper.Internal
 {
     internal class Collections
     {
-        public class MaintainableCollectionInfo
+        public class MaintainableCollectionInfo(
+            Type genericTypeDefinition,
+            Type localGenericTypeDefinition)
         {
-            public Type GenericTypeDefinition { get; }
-            public Type LocalGenericTypeDefinition { get; }
+            public Type GenericTypeDefinition { get; } = genericTypeDefinition;
+            public Type LocalGenericTypeDefinition { get; } = localGenericTypeDefinition;
 
-            public bool IsImmutable { get; }
-
-            public MaintainableCollectionInfo(
-                Type genericTypeDefinition,
-                Type localGenericTypeDefinition)
-            {
-                GenericTypeDefinition = genericTypeDefinition;
-                LocalGenericTypeDefinition = localGenericTypeDefinition;
-                IsImmutable = IsImmutable(genericTypeDefinition);
-            }
+            public bool IsImmutable { get; } = IsImmutable(genericTypeDefinition);
 
             public MaintainableCollectionInfo(
                 Type genericTypeDefinition) : this(genericTypeDefinition, genericTypeDefinition)
             { }
         }
 
-        public class ImmutableCollectionBuilderInfo
+        public class ImmutableCollectionBuilderInfo(
+            Type genericTypeDefinition,
+            Type builderGenericTypeDefinition)
         {
-            public Type GenericTypeDefinition { get; }
-            public Type BuilderGenericTypeDefinition { get; }
-
-            public ImmutableCollectionBuilderInfo(
-                Type genericTypeDefinition,
-                Type builderGenericTypeDefinition)
-            {
-                GenericTypeDefinition = genericTypeDefinition;
-                BuilderGenericTypeDefinition = builderGenericTypeDefinition;
-            }
+            public Type GenericTypeDefinition { get; } = genericTypeDefinition;
+            public Type BuilderGenericTypeDefinition { get; } = builderGenericTypeDefinition;
         }
 
         public static IEnumerable<MaintainableCollectionInfo> MaintainableGenericCollections { get; } = new List<MaintainableCollectionInfo>()
@@ -103,14 +90,14 @@ namespace Statics.Mapper.Internal
 
         public static bool IsImmutable(Type genericTypeDefinition)
         {
-            string collectionsImmutableNamespace = typeof(IImmutableList<Type>).Namespace;
+            string? collectionsImmutableNamespace = typeof(IImmutableList<Type>).Namespace;
             return genericTypeDefinition.Namespace == collectionsImmutableNamespace ||
                 genericTypeDefinition.GetInterfaces().Any(i => i.Namespace == collectionsImmutableNamespace);
         }
 
         public static IEnumerable<Type> GetGenericTypeDefinitionBaseTypes(Type type)
         {
-            Type baseType = type.BaseType;
+            Type? baseType = type.BaseType;
             if (baseType == null)
             {
                 if (type.IsGenericType)
@@ -118,7 +105,9 @@ namespace Statics.Mapper.Internal
             }
             else
             {
-                while (baseType != typeof(object))
+                while (
+                    baseType != null &&
+                    baseType != typeof(object))
                 {
                     if (baseType.IsGenericType)
                         yield return baseType.GetGenericTypeDefinition();
@@ -127,12 +116,12 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        public static MethodInfo GetCollectionAddMethod(Type collectionType)
+        public static MethodInfo? GetCollectionAddMethod(Type collectionType)
         {
             if (IsAssignableFrom(collectionType, typeof(ICollection<>)))
                 return typeof(ICollection<>).MakeGenericType(GetIEnumerableArgument(collectionType)).GetMethod(nameof(ICollection<Type>.Add));
 
-            string[] addMethodNames = new string[] { "Add", "TryAdd", "Push", "Enqueue" };
+            string[] addMethodNames = [nameof(List<Type>.Add), nameof(Dictionary<string, string>.TryAdd), nameof(Stack<Type>.Push), nameof(Queue<Type>.Enqueue)];
             Type iEnumerableArgument = GetIEnumerableArgument(collectionType);
 
             return collectionType.GetMethods().FirstOrDefault(m =>
@@ -141,7 +130,7 @@ namespace Statics.Mapper.Internal
                 m.GetParameters()[0].ParameterType == iEnumerableArgument);
         }
 
-        private static Type MakeLocalGenericType(
+        static Type MakeLocalGenericType(
             Type destinationType,
             MaintainableCollectionInfo maintainableCollectionInfo)
         {
@@ -155,24 +144,23 @@ namespace Statics.Mapper.Internal
             else if (genericTypeDefinitionArgumentsLength > localTypeDefinitionArgumentsLength)
                 return maintainableCollectionInfo.LocalGenericTypeDefinition.MakeGenericType(destinationIEnumerableArgument);
             else
-                return maintainableCollectionInfo.LocalGenericTypeDefinition.MakeGenericType(new Type[]
-                    {
+                return maintainableCollectionInfo.LocalGenericTypeDefinition.MakeGenericType(
+                    [
                         destinationIEnumerableArgument.GenericTypeArguments[0],
                         destinationIEnumerableArgument.GenericTypeArguments[1]
-                    });
+                    ]);
         }
 
-        public static bool TryGetCollectionLocalType(
+        public static Type? GetCollectionLocalType(
             Type sourceType,
-            Type destinationType,
-            out Type localType)
+            Type destinationType)
         {
-            localType = null;
-            MaintainableCollectionInfo maintainableCollectionInfo;
-            Type intersectType;
+            Type? localType = null;
+            MaintainableCollectionInfo? maintainableCollectionInfo;
+            Type? intersectType;
 
             Type destinationIEnumerableArgument = GetIEnumerableArgument(destinationType);
-            Type destinationGenericTypeDefinition =
+            Type? destinationGenericTypeDefinition =
                 destinationType.IsGenericType ? destinationType.GetGenericTypeDefinition() : null;
 
             bool loopIndex =
@@ -202,7 +190,7 @@ namespace Statics.Mapper.Internal
                         localType = MakeLocalGenericType(destinationType, maintainableCollectionInfo);
                 }
 
-                return localType != null;
+                return localType;
             }
 
 
@@ -239,31 +227,31 @@ namespace Statics.Mapper.Internal
             {
                 localType = typeof(List<>).MakeGenericType(destinationIEnumerableArgument);
             }
-            else if (
+            else if (destinationGenericTypeDefinition != null &&
                 IsImmutable(destinationGenericTypeDefinition) &&
                 MaintainableGenericCollections.Any(s => s.GenericTypeDefinition == destinationGenericTypeDefinition))
             {
                 localType = MakeLocalGenericType(destinationType, MaintainableGenericCollections.First(t => t.GenericTypeDefinition == destinationGenericTypeDefinition));
             }
 
-            return localType != null;
+            return localType;
         }
 
         public static bool CanMaintainCollection(
             Type sourceType,
             Type destinationType) =>
-            TryGetCollectionLocalType(sourceType, destinationType, out _);
+            GetCollectionLocalType(sourceType, destinationType) != null;
 
         public static bool IsAssignableFrom(Type type, Type genericTypeInterface) =>
-            Reflection.TypeInfo.ImplementsGenericTypeInterface(type, genericTypeInterface) ||
+            MapperTypeInfo.ImplementsGenericTypeInterface(type, genericTypeInterface) ||
             (type.IsInterface && type.IsGenericType && type.GetGenericTypeDefinition() == genericTypeInterface);
 
         public static bool IsCollection(Type type) =>
-            type.IsArray || (!Reflection.TypeInfo.IsBuiltIn(type) && IsAssignableFrom(type, typeof(IEnumerable<>)));
+            type.IsArray || (!MapperTypeInfo.IsBuiltIn(type) && IsAssignableFrom(type, typeof(IEnumerable<>)));
 
         public static Type GetIEnumerableArgument(Type collectionType) =>
             collectionType.IsGenericType && collectionType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ?
             collectionType.GenericTypeArguments[0] :
-            Reflection.TypeInfo.GetGenericTypeInterface(collectionType, typeof(IEnumerable<>)).GenericTypeArguments[0];
+            MapperTypeInfo.GetGenericTypeInterface(collectionType, typeof(IEnumerable<>)).GenericTypeArguments[0];
     }
 }

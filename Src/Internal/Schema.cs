@@ -1,5 +1,4 @@
-﻿using Statics.Reflection;
-using Statics.Reflection.Emit;
+﻿using Statics.Mapper.Internal.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,24 +8,24 @@ namespace Statics.Mapper.Internal
 {
     internal class Schema
     {
-        public IEnumerable<SourceNode> SourceNodes { get; private set; }
-        public IEnumerable<DestinationNode> DestinationNodes { get; private set; }
-        public SourceNode SourceRootNode { get; private set; }
-        public DestinationNode DestinationRootNode { get; private set; }
+        public List<SourceNode> SourceNodes { get; set; }
+        public List<DestinationNode> DestinationNodes { get; set; }
+        public SourceNode SourceRootNode { get; set; }
+        public DestinationNode DestinationRootNode { get; set; }
 
-        private static readonly string Value = "Value";
-        private static readonly char DOT = '.';
+        static readonly string Value = "Value";
+        static readonly char DOT = '.';
 
-        public Schema(Type source, Type destination, IEnumerable<IMapOption> mapOptions)
+        public Schema(Type source, Type destination, List<IMapperOptionArguments>? mapOptions)
         {
             SourceNodes = GetNodes(source, (node) => node.HasGetMethod)
                .Select(s => new SourceNode(s)).ToList();
 
-            SourceNodes.ToList().ForEach(s =>
+            SourceNodes.ForEach(s =>
             {
                 s.ParentNode = GetParentNode(s);
-                s.ParentNodes = GetParentNodes(s).ToList();
-                s.MemberInfo = s.ParentNode?.Members.FirstOrDefault(w => w.Name == TypeInfo.GetName(s.Name));
+                s.ParentNodes = GetParentNodes(s);
+                s.Member = s.ParentNode?.Members.FirstOrDefault(w => w.Name == MapperTypeInfo.GetName(s.Name));
             });
 
             DestinationNodes = GetNodes(destination, (node) =>
@@ -35,11 +34,11 @@ namespace Statics.Mapper.Internal
             )
             .Select(s => new DestinationNode(s)).ToList();
 
-            DestinationNodes.ToList().ForEach(d =>
+            DestinationNodes.ForEach(d =>
             {
                 d.ParentNode = GetParentNode(d);
-                d.ParentNodes = GetParentNodes(d).ToList();
-                d.MemberInfo = d.ParentNode?.Members.FirstOrDefault(w => w.Info.Name == TypeInfo.GetName(d.Name))?.Info;
+                d.ParentNodes = GetParentNodes(d);
+                d.Member = d.ParentNode?.Members.FirstOrDefault(w => w.Info.Name == MapperTypeInfo.GetName(d.Name))?.Info;
             });
 
             SourceRootNode = SourceNodes.First(w => w.Depth == 0);
@@ -49,7 +48,7 @@ namespace Statics.Mapper.Internal
                 SourceRootNode,
                 DestinationRootNode,
                 mapOptions,
-                out List<IMapOption> options,
+                out List<IMapperOptionArguments> options,
                 out bool withRootOption);
 
             if (options.Count == 0)
@@ -66,75 +65,73 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private static void AdaptMapperConfigOptions(
+        static void AdaptMapperConfigOptions(
             SourceNode sourceNode,
             DestinationNode destinationNode,
-            IEnumerable<IMapOption> mapperConfigOptions,
-            out List<IMapOption> outOptions,
+            List<IMapperOptionArguments>? mapOptions,
+            out List<IMapperOptionArguments> outMapOptions,
             out bool withRootOption)
         {
             withRootOption = false;
 
-            if (mapperConfigOptions == null)
+            if (mapOptions == null)
             {
-                outOptions = new List<IMapOption>();
+                outMapOptions = [];
                 return;
             }
 
-            outOptions = mapperConfigOptions.ToList();
+            outMapOptions = new List<IMapperOptionArguments>(mapOptions);
 
-            int optionIndex = outOptions.FindLastIndex(o =>
+            int optionIndex = outMapOptions.FindLastIndex(o =>
                 GetDestinationMemberName(o).Count == 0 &&
-                o.Name == nameof(MapOptions<Type, Type>.Ignore));
+                o.Name == nameof(MapperMapOptions<Type, Type>.Ignore));
 
             if (optionIndex != -1)
             {
-                outOptions = outOptions.GetRange(optionIndex, outOptions.Count - optionIndex);
+                outMapOptions = outMapOptions.GetRange(optionIndex, outMapOptions.Count - optionIndex);
                 withRootOption = true;
             }
 
-            optionIndex = outOptions.FindLastIndex(o =>
+            optionIndex = outMapOptions.FindLastIndex(o =>
                 GetDestinationMemberName(o).Count == 0 &&
-                o.Name == nameof(MapOptions<Type, Type>.Map));
+                o.Name == nameof(MapperMapOptions<Type, Type>.Map));
 
             if (optionIndex != -1)
             {
-                outOptions = outOptions.GetRange(optionIndex, outOptions.Count - optionIndex);
+                outMapOptions = outMapOptions.GetRange(optionIndex, outMapOptions.Count - optionIndex);
                 withRootOption = true;
             }
 
-            for (int i = 0; i < outOptions.Count; i++)
+            for (int i = 0; i < outMapOptions.Count; i++)
             {
-                switch (outOptions[i].Name)
+                switch (outMapOptions[i].Name)
                 {
-                    case nameof(MapOptions<Type, Type>.Ignore):
+                    case nameof(MapperMapOptions<Type, Type>.Ignore):
                         {
                             if (destinationNode.Depth != 0)
                             {
-                                IgnoreOption ignoreOption = new(outOptions[i]);
-                                outOptions[i] = new IgnoreOption(
+                                IgnoreOption ignoreOption = new(outMapOptions[i]);
+                                outMapOptions[i] = new IgnoreOption(
                                     destinationNode.Depth != 0 ?
-                                    new List<string> { string.Concat(destinationNode.Name, DOT, ignoreOption.DestinationMemberNames) } :
-                                    ignoreOption.DestinationMemberNames).AsMapOption();
+                                    [string.Concat(destinationNode.Name, DOT, ignoreOption.DestinationMemberNames)] :
+                                    ignoreOption.DestinationMemberNames).AsMapOptionArguments();
                             }
                         }
                         break;
-                    case nameof(MapOptions<Type, Type>.Map):
+                    case nameof(MapperMapOptions<Type, Type>.Map):
                         {
                             if (sourceNode.Depth != 0 || destinationNode.Depth != 0)
                             {
-                                MapOption mapOption = new(outOptions[i]);
-                                outOptions[i] = new MapOption(
+                                MapOption mapOption = new(outMapOptions[i]);
+                                outMapOptions[i] = new MapOption(
                                     sourceNode.Depth != 0 ?
                                     string.Concat(sourceNode.Name, DOT, mapOption.SourceMemberName) :
                                     mapOption.SourceMemberName,
-
                                     destinationNode.Depth != 0 ?
                                     string.Concat(destinationNode.Name, DOT, mapOption.DestinationMemberName) :
                                     mapOption.DestinationMemberName,
-
                                     mapOption.Expand,
-                                    mapOption.UseMapperConfig).AsMapOption();
+                                    mapOption.UseMapperConfig).AsMapOptionArguments();
                             }
                         }
                         break;
@@ -144,33 +141,35 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private static IEnumerable<IMapOption> GetMapperConfigOptions(SourceNode sourceNode, DestinationNode destinationNode) =>
-            (IEnumerable<IMapOption>)
+#pragma warning disable CS8600, CS8602, CS8603 // Converting null literal or possible null value to non-nullable type. Dereference of a possibly null reference. Possible null reference return.
+        static List<IMapperOptionArguments> GetMapperConfigOptions(SourceNode sourceNode, DestinationNode destinationNode) =>
+            (List<IMapperOptionArguments>)
                 typeof(MapperConfig<,>)
-                    .MakeGenericType(new Type[] { sourceNode.Type, destinationNode.Type })
+                    .MakeGenericType([sourceNode.Type, destinationNode.Type])
                     .GetMethod(nameof(MapperConfig<Type, Type>.GetOptions))
                     .Invoke(null, null);
+#pragma warning restore CS8600, CS8602, CS8603 // Converting null literal or possible null value to non-nullable type. Dereference of a possibly null reference. Possible null reference return.
 
-        private static List<string> GetDestinationMemberName(IMapOption option)
+        static List<string> GetDestinationMemberName(IMapperOptionArguments option)
         {
             return option.Name switch
             {
-                nameof(MapOptions<Type, Type>.Ignore) => new IgnoreOption(option).DestinationMemberNames,
-                nameof(MapOptions<Type, Type>.Map) => new List<string> { new MapOption(option).DestinationMemberName },
-                _ => null,
+                nameof(MapperMapOptions<Type, Type>.Ignore) => new IgnoreOption(option).DestinationMemberNames,
+                nameof(MapperMapOptions<Type, Type>.Map) => [new MapOption(option).DestinationMemberName],
+                _ => throw new NotImplementedException()
             };
         }
 
-        private void ApplyOptions(IEnumerable<IMapOption> options)
+        void ApplyOptions(List<IMapperOptionArguments> options)
         {
-            foreach (IMapOption option in options)
+            foreach (IMapperOptionArguments option in options)
             {
                 switch (option.Name)
                 {
-                    case nameof(MapOptions<Type, Type>.Ignore):
+                    case nameof(MapperMapOptions<Type, Type>.Ignore):
                         ApplyIgnoreOption(option);
                         break;
-                    case nameof(MapOptions<Type, Type>.Map):
+                    case nameof(MapperMapOptions<Type, Type>.Map):
                         ApplyMapOption(option);
                         break;
                     default:
@@ -179,35 +178,40 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void ApplyMapOption(IMapOption option)
+        void ApplyMapOption(IMapperOptionArguments option)
         {
             MapOption mapOption = new(option);
             ApplyMapOption(mapOption.SourceMemberName, mapOption.DestinationMemberName, mapOption.Expand, mapOption.UseMapperConfig);
         }
 
-        private static bool UseMapperMap(SourceNode sourceNode, DestinationNode destinationNode) =>
+#pragma warning disable CS8605 // Unboxing a possibly null value.
+        static bool UseMapperMap(SourceNode sourceNode, DestinationNode destinationNode) =>
             (bool)typeof(MapperConfig<,>)
-                .MakeGenericType(new Type[] { sourceNode.Type, destinationNode.Type })
+                .MakeGenericType([sourceNode.Type, destinationNode.Type])
                 .GetProperties(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
                 .First(p => p.Name == nameof(MapperConfig<Type, Type>.UsePredefinedMap))
                 .GetValue(null, null);
+#pragma warning restore CS8605 // Unboxing a possibly null value.
 
-        private static void SetUseMapper(DestinationNode destinationNode, bool value)
+        static void SetUseMapper(DestinationNode destinationNode, bool value)
         {
+            if (destinationNode.ParentNodes == null)
+                return;
+
             foreach (DestinationNode parentNode in destinationNode.ParentNodes)
                 parentNode.UseMapper = false;
 
             destinationNode.UseMapper = value;
         }
 
-        private void MapperMap(SourceNode sourceNode, DestinationNode destinationNode)
+        void MapperMap(SourceNode sourceNode, DestinationNode destinationNode)
         {
             LoadDestinationNodePath(destinationNode);
             destinationNode.SourceNode = sourceNode;
             SetUseMapper(destinationNode, true);
         }
 
-        private void Map(SourceNode sourceNode, DestinationNode destinationNode, bool expand, bool useMapperConfig)
+        void Map(SourceNode sourceNode, DestinationNode destinationNode, bool expand, bool useMapperConfig)
         {
             if (!EvaluateMap(sourceNode, destinationNode))
                 return;
@@ -220,8 +224,10 @@ namespace Statics.Mapper.Internal
 
             SetUseMapper(destinationNode, false);
 
-            List<IMapOption> options = null;
+            List<IMapperOptionArguments> options = [];
             bool withRootOption = false;
+
+            var test = GetMapperConfigOptions(sourceNode, destinationNode);
 
             if (useMapperConfig)
                 AdaptMapperConfigOptions(
@@ -231,6 +237,8 @@ namespace Statics.Mapper.Internal
                     out options,
                     out withRootOption);
 
+            options ??= [];
+
             foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
             {
                 if (!destinationNodeMember.Info.HasSetMethod)
@@ -238,10 +246,10 @@ namespace Statics.Mapper.Internal
 
                 if (useMapperConfig &&
                     withRootOption &&
-                    options.Any(o => GetDestinationMemberName(o).Contains(NodeMemberName(destinationNode.Name, destinationNodeMember.Info.Name))))
+                    options.Exists(o => GetDestinationMemberName(o).Contains(NodeMemberName(destinationNode.Name, destinationNodeMember.Info.Name))))
                     continue;
 
-                MemberInfo sourceNodeMember =
+                MapperTypeMemberInfo? sourceNodeMember =
                     sourceNode.Members.FirstOrDefault(w => w.Name.Equals(destinationNodeMember.Info.Name, StringComparison.OrdinalIgnoreCase));
 
                 if (sourceNodeMember == null)
@@ -275,20 +283,23 @@ namespace Statics.Mapper.Internal
                 ApplyOptions(options);
         }
 
-        private bool EvaluateMap(SourceNode sourceNode, DestinationNode destinationNode)
+        bool EvaluateMap(SourceNode? sourceNode, DestinationNode? destinationNode)
         {
+            if (sourceNode == null || destinationNode == null)
+                return false;
+
             if (sourceNode.IsStatic &&
                 destinationNode.IsStatic &&
                 sourceNode.Type == destinationNode.Type)
                 return false;
 
-            List<SourceNode> sourceNodes = GetParentNodes(sourceNode).ToList();
+            List<SourceNode> sourceNodes = GetParentNodes(sourceNode);
             for (int sn = sourceNodes.Count; sn-- > 0;)
             {
                 if (!sourceNodes[sn].IsStatic)
                     continue;
 
-                List<DestinationNode> destinationNodes = GetParentNodes(destinationNode).ToList();
+                List<DestinationNode> destinationNodes = GetParentNodes(destinationNode);
                 for (int dn = destinationNodes.Count; dn-- > 0;)
                 {
                     if (!destinationNodes[dn].IsStatic)
@@ -310,10 +321,12 @@ namespace Statics.Mapper.Internal
             bool sourceMemberIsNode = IsSourceNode(sourceMember);
             bool destinationMemberIsNode = IsDestinationNode(destinationMember);
 
-            SourceNode sourceNode = null;
-            MemberInfo sourceNodeMember = null;
-            DestinationNode destinationNode = null;
-            DestinationNodeMember destinationNodeMember = null;
+            SourceNode? sourceNode;
+            MapperTypeMemberInfo? sourceNodeMember = null;
+            DestinationNode? destinationNode;
+            DestinationNodeMember? destinationNodeMember = null;
+
+            InvalidOperationException mapeException = new($"Cannot map from {sourceMember} to {destinationMember}.");
 
             if (sourceMemberIsNode != destinationMemberIsNode)
                 throw new InvalidOperationException();
@@ -324,8 +337,7 @@ namespace Statics.Mapper.Internal
                 destinationNode = DestinationNodes.First(w => w.Name == destinationMember);
 
                 if (!EvaluateMap(sourceNode, destinationNode))
-                    throw new InvalidOperationException(
-                        $"Cannot map from {sourceNode.Name} static [{sourceNode.Type}] to {destinationNode.Name} static [{destinationNode.Type}].");
+                    throw mapeException;
 
                 Map(sourceNode, destinationNode, expand, useMapperConfig);
                 OnChange();
@@ -333,19 +345,20 @@ namespace Statics.Mapper.Internal
                 return;
             }
 
-            sourceNode = SourceNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(sourceMember));
-            sourceNodeMember = sourceNode.Members.FirstOrDefault(w => w.Name == TypeInfo.GetName(sourceMember));
+            sourceNode = SourceNodes.FirstOrDefault(w => w.Name == MapperTypeInfo.GetNodeName(sourceMember));
+            sourceNodeMember = sourceNode?.Members.FirstOrDefault(w => w.Name == MapperTypeInfo.GetName(sourceMember));
 
-            destinationNode = DestinationNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(destinationMember));
-            destinationNodeMember = destinationNode.Members.FirstOrDefault(w => w.Info.Name == TypeInfo.GetName(destinationMember));
+            destinationNode = DestinationNodes.FirstOrDefault(w => w.Name == MapperTypeInfo.GetNodeName(destinationMember));
+            destinationNodeMember = destinationNode?.Members.FirstOrDefault(w => w.Info.Name == MapperTypeInfo.GetName(destinationMember));
 
-            if (sourceNodeMember == null ||
+            if (sourceNode == null ||
+                sourceNodeMember == null ||
+                destinationNode == null ||
                 destinationNodeMember == null)
-                throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
+                throw mapeException;
 
             if (!EvaluateMap(sourceNode, destinationNode))
-                throw new InvalidOperationException(
-                    $"Cannot map from {sourceNode.Name} static [{sourceNode.Type}] to {destinationNode.Name} static [{destinationNode.Type}].");
+                throw mapeException;
 
             if (!TryMapMember(
                 sourceNode,
@@ -358,7 +371,7 @@ namespace Statics.Mapper.Internal
             OnChange();
         }
 
-        private void Ignore(DestinationNode destinationNode)
+        void Ignore(DestinationNode destinationNode)
         {
             destinationNode.Load = false;
 
@@ -374,23 +387,23 @@ namespace Statics.Mapper.Internal
                 Ignore(childNode);
         }
 
-        private void ApplyIgnoreOption(List<string> destinationMembers)
+        void ApplyIgnoreOption(List<string> destinationMembers)
         {
             for (int d = 0; d < destinationMembers.Count; d++)
             {
                 string destinationMember = ResolveDestinationMemberName(destinationMembers[d]);
 
-                DestinationNode node = DestinationNodes.FirstOrDefault(w => w.Name == destinationMember);
+                DestinationNode? node = DestinationNodes.FirstOrDefault(w => w.Name == destinationMember);
                 if (node != null)
                 {
                     Ignore(node);
                     continue;
                 }
 
-                node = DestinationNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(destinationMember));
+                node = DestinationNodes.FirstOrDefault(w => w.Name == MapperTypeInfo.GetNodeName(destinationMember));
                 if (node == null) continue;
 
-                DestinationNodeMember member = node.Members.FirstOrDefault(w => w.Info.Name == TypeInfo.GetName(destinationMember));
+                DestinationNodeMember? member = node.Members.FirstOrDefault(w => w.Info.Name == MapperTypeInfo.GetName(destinationMember));
                 if (member == null) continue;
 
                 member.Map = false;
@@ -401,7 +414,7 @@ namespace Statics.Mapper.Internal
             OnChange();
         }
 
-        private void ApplyIgnoreOption(IMapOption option)
+        void ApplyIgnoreOption(IMapperOptionArguments option)
         {
             IgnoreOption ignoreOption = new(option);
             ApplyIgnoreOption(ignoreOption.DestinationMemberNames);
@@ -414,17 +427,21 @@ namespace Statics.Mapper.Internal
                     action(destinationNode);
         }
 
-        private Dictionary<string, List<SourceNode>> SourceChildNodes = null;
-        private void SetSourceChildNodes()
+        Dictionary<string, List<SourceNode>>? _sourceChildNodes = null;
+
+        Dictionary<string, List<SourceNode>> GetSourceChildNodes()
         {
-            SourceChildNodes = new Dictionary<string, List<SourceNode>>();
+            if (_sourceChildNodes != null)
+                return _sourceChildNodes;
+
+            _sourceChildNodes = [];
 
             List<SourceNode> childNodes = SourceNodes.Where(n => n.ParentNode?.Name == SourceRootNode.Name).ToList();
 
-            SourceChildNodes.Add(SourceRootNode.Name, childNodes);
+            _sourceChildNodes.Add(SourceRootNode.Name, childNodes);
 
             if (childNodes.Count == 0)
-                return;
+                return _sourceChildNodes;
 
             Queue<SourceNode> queue = new(childNodes);
 
@@ -432,23 +449,25 @@ namespace Statics.Mapper.Internal
             {
                 SourceNode node = queue.Dequeue();
                 childNodes = SourceNodes.Where(n => n.ParentNode?.Name == node.Name).ToList();
-                SourceChildNodes.Add(node.Name, childNodes);
+                _sourceChildNodes.Add(node.Name, childNodes);
 
                 if (childNodes.Count != 0)
                 {
-                    SourceNode parentNode = node.ParentNode;
+                    SourceNode? parentNode = node.ParentNode;
                     while (parentNode != null)
                     {
-                        SourceChildNodes[parentNode.Name].AddRange(childNodes);
+                        _sourceChildNodes[parentNode.Name].AddRange(childNodes);
                         parentNode = parentNode.ParentNode;
                     }
 
-                    childNodes.ForEach(n => queue.Enqueue(n));
+                    childNodes.ForEach(queue.Enqueue);
                 }
             }
+
+            return _sourceChildNodes;
         }
 
-        private static bool CanMapCollection(
+        static bool CanMapCollection(
             Type sourceType,
             Type destinationType)
         {
@@ -481,15 +500,15 @@ namespace Statics.Mapper.Internal
             if (destinationType.IsInterface || destinationType.IsAbstract)
                 return sourceType == destinationType;
 
-            if (TypeInfo.IsBuiltIn(destinationType))
-                return ILGenerator.CanEmitConvert(sourceType, destinationType);
+            if (MapperTypeInfo.IsBuiltIn(destinationType))
+                return IL.CanEmitConvert(sourceType, destinationType);
 
             return true;
         }
 
         public static bool CanLoadAndSetCollection(
-            MemberInfo sourceMember,
-            MemberInfo destinationMember)
+            MapperTypeMemberInfo sourceMember,
+            MapperTypeMemberInfo destinationMember)
         {
             if (!(sourceMember.HasGetMethod &&
                 destinationMember.HasSetMethod))
@@ -498,9 +517,9 @@ namespace Statics.Mapper.Internal
             return CanMapCollection(sourceMember.Type, destinationMember.Type);
         }
 
-        private bool TryMapMember(
+        bool TryMapMember(
             SourceNode sourceNode,
-            MemberInfo sourceNodeMember,
+            MapperTypeMemberInfo sourceNodeMember,
             DestinationNode destinationNode,
             DestinationNodeMember destinationNodeMember)
         {
@@ -510,7 +529,7 @@ namespace Statics.Mapper.Internal
             destinationNodeMember.IsCollection = IsCollection(destinationNodeMember.Info.Type);
 
             destinationNodeMember.Map = !destinationNodeMember.IsCollection ?
-                ILGenerator.CanEmitLoadAndSetValue(sourceNodeMember, destinationNodeMember.Info) :
+                IL.CanEmitLoadAndSetValue(sourceNodeMember, destinationNodeMember.Info) :
                 CanLoadAndSetCollection(sourceNodeMember, destinationNodeMember.Info);
 
             if (destinationNodeMember.Map)
@@ -525,7 +544,7 @@ namespace Statics.Mapper.Internal
         public static string NodeMemberName(string nodeName, string memberName) =>
             string.IsNullOrEmpty(nodeName) ? memberName : nodeName + DOT + memberName;
 
-        private void OnChange()
+        void OnChange()
         {
             foreach (SourceNode sourceNode in SourceNodes)
                 sourceNode.Load = false;
@@ -542,7 +561,9 @@ namespace Statics.Mapper.Internal
 
                 if (destinationNode.UseMapper)
                 {
+#pragma warning disable CS8604 // Possible null reference argument.
                     LoadSourceNodePath(destinationNode.SourceNode);
+#pragma warning restore CS8604 // Possible null reference argument.
                 }
                 else
                 {
@@ -557,19 +578,19 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private string ResolveSourceMemberName(string memberName)
+        string ResolveSourceMemberName(string memberName)
         {
             if (!memberName.Contains(Value))
                 return memberName;
 
-            List<string> segments = memberName.Split(DOT).ToList();
+            List<string> segments = [.. memberName.Split(DOT)];
 
             for (int i = 0; i < segments.Count; i++)
             {
                 if (segments[i] == Value)
                 {
-                    SourceNode sourceNode = SourceNodes
-                         .FirstOrDefault(n => n.Name == TypeInfo.GetNodeName(string.Join(DOT, segments.ToArray(), 0, i + 1)));
+                    SourceNode? sourceNode = SourceNodes
+                         .FirstOrDefault(n => n.Name == MapperTypeInfo.GetNodeName(string.Join(DOT, [.. segments], 0, i + 1)));
                     if (sourceNode != null && sourceNode.NullableUnderlyingType != null)
                     {
                         segments.RemoveAt(i);
@@ -581,11 +602,11 @@ namespace Statics.Mapper.Internal
             return string.Join(DOT, segments);
         }
 
-        private void LoadSourceNodePath(SourceNode sourceNode)
+        void LoadSourceNodePath(SourceNode sourceNode)
         {
             sourceNode.Load = true;
 
-            string[] segments = sourceNode.Name.Split(DOT, StringSplitOptions.RemoveEmptyEntries).ToArray();
+            string[] segments = [.. sourceNode.Name.Split(DOT, StringSplitOptions.RemoveEmptyEntries)];
 
             for (int i = 0; i < segments.Length; i++)
             {
@@ -602,11 +623,11 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void LoadDestinationNodePath(DestinationNode destinationNode)
+        void LoadDestinationNodePath(DestinationNode destinationNode)
         {
             destinationNode.Load = true;
 
-            string[] segments = destinationNode.Name.Split(DOT, StringSplitOptions.RemoveEmptyEntries).ToArray();
+            string[] segments = [.. destinationNode.Name.Split(DOT, StringSplitOptions.RemoveEmptyEntries)];
 
             for (int i = 0; i < segments.Length; i++)
             {
@@ -623,19 +644,19 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private string ResolveDestinationMemberName(string memberName)
+        string ResolveDestinationMemberName(string memberName)
         {
             if (!memberName.Contains(Value))
                 return memberName;
 
-            List<string> segments = memberName.Split(DOT).ToList();
+            List<string> segments = [.. memberName.Split(DOT)];
 
             for (int i = 0; i < segments.Count; i++)
             {
                 if (segments[i] == Value)
                 {
-                    DestinationNode destinationNode = DestinationNodes
-                        .FirstOrDefault(n => n.Name == TypeInfo.GetNodeName(string.Join(DOT, segments.ToArray(), 0, i + 1)));
+                    DestinationNode? destinationNode = DestinationNodes
+                        .FirstOrDefault(n => n.Name == MapperTypeInfo.GetNodeName(string.Join(DOT, [.. segments], 0, i + 1)));
                     if (destinationNode != null && destinationNode.NullableUnderlyingType != null)
                     {
                         segments.RemoveAt(i);
@@ -647,109 +668,103 @@ namespace Statics.Mapper.Internal
             return string.Join(DOT, segments);
         }
 
-        private bool IsSourceNode(string memberName) =>
+        bool IsSourceNode(string memberName) =>
             memberName == string.Empty || SourceNodes.Any(n => n.Name == memberName);
 
-        private bool IsDestinationNode(string memberName) =>
+        bool IsDestinationNode(string memberName) =>
             memberName == string.Empty || DestinationNodes.Any(n => n.Name == memberName);
 
         public static IEnumerable<DestinationNodeMember> GetDestinationNodeMembers(DestinationNode destinationNode, Func<DestinationNodeMember, bool> predicate) =>
             destinationNode.Members.Where(predicate);
 
-        public static MemberInfo GetMember(string nodeName, IEnumerable<TypeNode> nodes) =>
-            nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
-                .Members.First(w => w.Name == TypeInfo.GetName(nodeName));
+        public static MapperTypeMemberInfo GetMember(string nodeName, IEnumerable<NodeInfo> nodes) =>
+            nodes.First(w => w.Name == MapperTypeInfo.GetNodeName(nodeName))
+                .Members.First(w => w.Name == MapperTypeInfo.GetName(nodeName));
 
-        public static MemberInfo GetMember(string nodeName, IEnumerable<SourceNode> nodes) =>
-            nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
-                .Members.First(w => w.Name == TypeInfo.GetName(nodeName));
+        public static MapperTypeMemberInfo GetMember(string nodeName, IEnumerable<SourceNode> nodes) =>
+            nodes.First(w => w.Name == MapperTypeInfo.GetNodeName(nodeName))
+                .Members.First(w => w.Name == MapperTypeInfo.GetName(nodeName));
 
-        public static MemberInfo GetMember(string nodeName, IEnumerable<DestinationNode> nodes) =>
-            nodes.First(w => w.Name == TypeInfo.GetNodeName(nodeName))
-                .Members.First(w => w.Info.Name == TypeInfo.GetName(nodeName)).Info;
+        public static MapperTypeMemberInfo GetMember(string nodeName, IEnumerable<DestinationNode> nodes) =>
+            nodes.First(w => w.Name == MapperTypeInfo.GetNodeName(nodeName))
+                .Members.First(w => w.Info.Name == MapperTypeInfo.GetName(nodeName)).Info;
 
-        public SourceNode GetParentNode(SourceNode node) =>
-            node.Name != string.Empty ? SourceNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(node.Name)) : null;
+        public SourceNode? GetParentNode(SourceNode node) =>
+            node.Name != string.Empty ? SourceNodes.FirstOrDefault(w => w.Name == MapperTypeInfo.GetNodeName(node.Name)) : null;
 
-        public IEnumerable<SourceNode> GetParentNodes(SourceNode node)
+        public List<SourceNode> GetParentNodes(SourceNode node)
         {
-            List<SourceNode> returnValue = new();
+            List<SourceNode> parentNodes = [];
 
             if (node.Name == string.Empty)
-                return returnValue;
+                return parentNodes;
 
-            SourceNode parentNode = GetParentNode(node);
+            SourceNode? parentNode = GetParentNode(node);
 
             while (parentNode != null)
             {
-                returnValue.Add(parentNode);
+                parentNodes.Add(parentNode);
                 parentNode = GetParentNode(parentNode);
             }
 
-            return returnValue;
+            return parentNodes;
         }
 
-        public DestinationNode GetParentNode(DestinationNode node) =>
-            node.Name != string.Empty ? DestinationNodes.FirstOrDefault(w => w.Name == TypeInfo.GetNodeName(node.Name)) : null;
+        public DestinationNode? GetParentNode(DestinationNode node) =>
+            node.Name != string.Empty ? DestinationNodes.FirstOrDefault(w => w.Name == MapperTypeInfo.GetNodeName(node.Name)) : null;
 
-        public IEnumerable<DestinationNode> GetParentNodes(DestinationNode node)
+        public List<DestinationNode> GetParentNodes(DestinationNode node)
         {
-            List<DestinationNode> returnValue = new();
+            List<DestinationNode> parentNodes = [];
 
             if (node.Name == string.Empty)
-                return returnValue;
+                return parentNodes;
 
-            DestinationNode parentNode = GetParentNode(node);
+            DestinationNode? parentNode = GetParentNode(node);
 
             while (parentNode != null)
             {
-                returnValue.Add(parentNode);
+                parentNodes.Add(parentNode);
                 parentNode = GetParentNode(parentNode);
             }
 
-            return returnValue;
+            return parentNodes;
         }
 
-        public IEnumerable<SourceNode> GetChildNodes(SourceNode sourceNode, Func<SourceNode, bool> predicate = null, int depth = 1)
+        public List<SourceNode> GetChildNodes(SourceNode sourceNode, Func<SourceNode, bool>? predicate = null, int depth = 1)
         {
-            List<SourceNode> returnValue;
             bool filter(SourceNode n) =>
                 (depth == 0 || n.Depth <= sourceNode.Depth + depth) && (predicate == null || predicate(n));
 
-            if (SourceChildNodes != null)
-            {
-                SourceChildNodes.TryGetValue(sourceNode.Name, out returnValue);
-                return returnValue.Where(filter).ToList();
-            }
-
-            SetSourceChildNodes();
-            SourceChildNodes.TryGetValue(sourceNode.Name, out returnValue);
-
-            return returnValue.Where(predicate);
+            return GetSourceChildNodes().TryGetValue(sourceNode.Name, out List<SourceNode>? sourceChildNodes)
+                ? sourceChildNodes.Where(filter).ToList()
+                : [];
         }
 
-        public IEnumerable<DestinationNode> GetChildNodes(DestinationNode node, Func<DestinationNode, bool> predicate) =>
-            DestinationNodes.Where(destinationNode =>
-                destinationNode.ParentNode?.Name == node.Name &&
-                predicate(destinationNode));
+        public List<DestinationNode> GetChildNodes(DestinationNode node, Func<DestinationNode, bool> predicate) =>
+            DestinationNodes
+                .Where(destinationNode =>
+                    destinationNode.ParentNode?.Name == node.Name &&
+                    predicate(destinationNode))
+                .ToList();
 
-        public static IEnumerable<TypeNode> GetNodes(Type type, Func<MemberInfo, bool> predicate)
+        public static List<NodeInfo> GetNodes(Type type, Func<MapperTypeMemberInfo, bool> predicate)
         {
-            List<TypeNode> returnValue = new();
-            List<TypeNode> nodes = TypeInfo.GetNodes(type, true).ToList();
-            nodes.Sort((l, r) => l.Depth.CompareTo(r.Depth));
+            List<NodeInfo> nodes = [];
+            List<NodeInfo> typeNodes = MapperTypeInfo.GetNodes(type, true);
+            typeNodes.Sort((l, r) => l.Depth.CompareTo(r.Depth));
 
-            for (int n = 0; n < nodes.Count; n++)
+            for (int n = 0; n < typeNodes.Count; n++)
             {
-                if (nodes[n].Depth == 0 ||
+                if (typeNodes[n].Depth == 0 ||
                     (
-                       predicate(GetMember(nodes[n].Name, nodes)) &&
-                       returnValue.Exists(w => w.Name == TypeInfo.GetNodeName(nodes[n].Name)
+                       predicate(GetMember(typeNodes[n].Name, typeNodes)) &&
+                       nodes.Exists(w => w.Name == MapperTypeInfo.GetNodeName(typeNodes[n].Name)
                     )))
-                    returnValue.Add(nodes[n]);
+                    nodes.Add(typeNodes[n]);
             }
 
-            return returnValue;
+            return nodes;
         }
     }
 }

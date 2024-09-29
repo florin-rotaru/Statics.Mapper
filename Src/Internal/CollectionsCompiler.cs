@@ -12,14 +12,14 @@ namespace Statics.Mapper.Internal
 {
     internal partial class Compiler
     {
-        private LocalBuilder LoopIndexLocal { get; set; }
-        private LocalBuilder LoopLengthLocal { get; set; }
-        private List<LocalBuilder> CollectionSourceLocals { get; set; } = new();
-        private List<LocalBuilder> CollectionSourceLocalEnumerators { get; set; } = new();
-        private List<LocalBuilder> CollectionDestinationLocals { get; set; } = new();
-        private Dictionary<(Type, Type), LocalBuilder> CollectionMapperMapLocals { get; set; } = new Dictionary<(Type, Type), LocalBuilder>();
+        LocalBuilder? LoopIndexLocal { get; set; }
+        LocalBuilder? LoopLengthLocal { get; set; }
+        List<LocalBuilder> CollectionSourceLocals { get; set; } = [];
+        List<LocalBuilder> CollectionSourceLocalEnumerators { get; set; } = [];
+        List<LocalBuilder> CollectionDestinationLocals { get; set; } = [];
+        Dictionary<(Type, Type), LocalBuilder> CollectionMapperMapLocals { get; set; } = new Dictionary<(Type, Type), LocalBuilder>();
 
-        private LocalBuilder GetOrAddLoopIndexLocal()
+        LocalBuilder GetOrAddLoopIndexLocal()
         {
             if (LoopIndexLocal != null)
                 return LoopIndexLocal;
@@ -28,7 +28,7 @@ namespace Statics.Mapper.Internal
             return LoopIndexLocal;
         }
 
-        private LocalBuilder GetOrAddLoopLengthLocal()
+        LocalBuilder GetOrAddLoopLengthLocal()
         {
             if (LoopLengthLocal != null)
                 return LoopLengthLocal;
@@ -37,9 +37,9 @@ namespace Statics.Mapper.Internal
             return LoopLengthLocal;
         }
 
-        private LocalBuilder GetOrAddCollectionSourceLocal(Type sourceType)
+        LocalBuilder GetOrAddCollectionSourceLocal(Type sourceType)
         {
-            LocalBuilder sourceLocal = CollectionSourceLocals.FirstOrDefault(l => l.LocalType == sourceType);
+            LocalBuilder? sourceLocal = CollectionSourceLocals.FirstOrDefault(l => l.LocalType == sourceType);
             if (sourceLocal == null)
             {
                 sourceLocal = IL.DeclareLocal(sourceType);
@@ -49,19 +49,19 @@ namespace Statics.Mapper.Internal
             return sourceLocal;
         }
 
-        private static MethodInfo GetEnumerator(Type collectionType) =>
+        static MethodInfo? GetEnumerator(Type collectionType) =>
             collectionType.GetMethod(nameof(IEnumerable.GetEnumerator), Type.EmptyTypes) ??
                 typeof(IEnumerable<>).MakeGenericType(GetIEnumerableArgument(collectionType))
                     .GetMethod(nameof(IEnumerable.GetEnumerator), Type.EmptyTypes);
 
-        private LocalBuilder GetOrAddCollectionSourceLocalEnumerator(Type sourceType)
+        LocalBuilder? GetOrAddCollectionSourceLocalEnumerator(Type sourceType)
         {
-            Type enumerator = GetEnumerator(sourceType).ReturnType;
+            Type? enumerator = GetEnumerator(sourceType)?.ReturnType;
 
-            LocalBuilder sourceLocalEnumerator =
+            LocalBuilder? sourceLocalEnumerator =
                 CollectionSourceLocalEnumerators.FirstOrDefault(l => l.LocalType == enumerator);
 
-            if (sourceLocalEnumerator == null)
+            if (enumerator != null && sourceLocalEnumerator == null)
             {
                 sourceLocalEnumerator = IL.DeclareLocal(enumerator);
                 CollectionSourceLocalEnumerators.Add(sourceLocalEnumerator);
@@ -70,9 +70,9 @@ namespace Statics.Mapper.Internal
             return sourceLocalEnumerator;
         }
 
-        private LocalBuilder GetOrAddCollectionDestinationLocal(Type destinationType)
+        LocalBuilder GetOrAddCollectionDestinationLocal(Type destinationType)
         {
-            LocalBuilder destinationLocal = CollectionDestinationLocals.FirstOrDefault(l => l.LocalType == destinationType);
+            LocalBuilder? destinationLocal = CollectionDestinationLocals.FirstOrDefault(l => l.LocalType == destinationType);
             if (destinationLocal == null)
             {
                 destinationLocal = IL.DeclareLocal(destinationType);
@@ -82,18 +82,18 @@ namespace Statics.Mapper.Internal
             return destinationLocal;
         }
 
-        private LocalBuilder GetOrAddCollectionMapperMapLocal(Type sourceType, Type destinationType)
+        LocalBuilder GetOrAddCollectionMapperMapLocal(Type sourceType, Type destinationType)
         {
-            if (!CollectionMapperMapLocals.TryGetValue((sourceType, destinationType), out LocalBuilder mapperLocal))
+            if (!CollectionMapperMapLocals.TryGetValue((sourceType, destinationType), out LocalBuilder? mapperLocal))
             {
-                mapperLocal = IL.DeclareLocal(typeof(Func<,>).MakeGenericType(new[] { sourceType, destinationType }));
+                mapperLocal = IL.DeclareLocal(typeof(Func<,>).MakeGenericType([sourceType, destinationType]));
                 CollectionMapperMapLocals.Add((sourceType, destinationType), mapperLocal);
             }
 
             return mapperLocal;
         }
 
-        private void DeclareCollectionSourceLocals(CollectionInfo collectionInfo)
+        void DeclareCollectionSourceLocals(CollectionInfo collectionInfo)
         {
             if (collectionInfo.UseArrayCopyTo)
             {
@@ -128,32 +128,31 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void DeclareCollectionDestinationLocals(CollectionInfo collectionInfo)
+        void DeclareCollectionDestinationLocals(CollectionInfo collectionInfo)
         {
-            TryGetCollectionLocalType(
+            Type destinationLocalType = GetCollectionLocalType(
                 collectionInfo.SourceType,
-                collectionInfo.DestinationType,
-                out Type destinationLocalType);
+                collectionInfo.DestinationType);
 
             collectionInfo.DestinationLocal = GetOrAddCollectionDestinationLocal(destinationLocalType);
         }
 
-        private void DeclareCollectionMapperMapLocal(CollectionInfo collectionInfo)
+        void DeclareCollectionMapperMapLocal(CollectionInfo collectionInfo)
         {
-            if (Reflection.TypeInfo.IsBuiltIn(collectionInfo.SourceArgument))
+            if (MapperTypeInfo.IsBuiltIn(collectionInfo.SourceArgument))
                 return;
 
             collectionInfo.MapperMapMethodLocal = GetOrAddCollectionMapperMapLocal(collectionInfo.SourceArgument, collectionInfo.DestinationArgument);
         }
 
-        private void DeclareCollectionLocals(CollectionInfo collectionInfo)
+        void DeclareCollectionLocals(CollectionInfo collectionInfo)
         {
             DeclareCollectionSourceLocals(collectionInfo);
             DeclareCollectionDestinationLocals(collectionInfo);
             DeclareCollectionMapperMapLocal(collectionInfo);
         }
 
-        private void DeclareCollectionLocals(DestinationNode destinationNode)
+        void DeclareCollectionLocals(DestinationNode destinationNode)
         {
             if (destinationNode.UseMapper)
                 return;
@@ -166,7 +165,7 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void SetCollectionSourceLocals(CollectionInfo collectionInfo)
+        void SetCollectionSourceLocals(CollectionInfo collectionInfo)
         {
             if (collectionInfo.UseArrayCopyTo)
             {
@@ -281,7 +280,7 @@ namespace Statics.Mapper.Internal
                 else
                     IL.EmitLoadArgument(collectionInfo.SourceType, 0);
 
-                MethodInfo methodInfo =
+                MethodInfo? methodInfo =
                     collectionInfo.SourceType.GetMethods().FirstOrDefault(m =>
                         m.Name == ToArray &&
                         m.GetParameters().Length == 0 &&
@@ -293,7 +292,7 @@ namespace Statics.Mapper.Internal
                 }
                 else
                 {
-                    IL.EmitCallMethod(typeof(Reflection.Emit.ILGenerator.Converters)
+                    IL.EmitCallMethod(typeof(ILConverters)
                         .GetMethods()
                         .First(m =>
                             m.Name == ToArray &&
@@ -304,7 +303,7 @@ namespace Statics.Mapper.Internal
                                     (IsAssignableFrom(collectionInfo.SourceType, typeof(ICollection<>)) ?
                                         typeof(ICollection<>) :
                                         typeof(IProducerConsumerCollection<>))))
-                        .MakeGenericMethod(new Type[] { collectionInfo.SourceArgument }));
+                        .MakeGenericMethod([collectionInfo.SourceArgument]));
                 }
 
                 IL.EmitStoreLocal(collectionInfo.SourceLocal);
@@ -337,12 +336,11 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void SetCollectionDestinationLocals(CollectionInfo collectionInfo)
+        void SetCollectionDestinationLocals(CollectionInfo collectionInfo)
         {
-            TryGetCollectionLocalType(
+            Type destinationLocalType = GetCollectionLocalType(
                 collectionInfo.SourceType,
-                collectionInfo.DestinationType,
-                out Type destinationLocalType);
+                collectionInfo.DestinationType);
 
             collectionInfo.DestinationLocal = GetOrAddCollectionDestinationLocal(destinationLocalType);
 
@@ -353,10 +351,10 @@ namespace Statics.Mapper.Internal
             }
             else
             {
-                if (collectionInfo.LoopLength != null && destinationLocalType.GetConstructor(new[] { typeof(int) }) != null)
+                if (collectionInfo.LoopLength != null && destinationLocalType.GetConstructor([typeof(int)]) != null)
                 {
                     IL.EmitLoadLocal(collectionInfo.LoopLength, false);
-                    IL.Emit(OpCodes.Newobj, destinationLocalType.GetConstructor(new[] { typeof(int) }));
+                    IL.Emit(OpCodes.Newobj, destinationLocalType.GetConstructor([typeof(int)]));
                 }
                 else
                 {
@@ -367,9 +365,9 @@ namespace Statics.Mapper.Internal
             IL.EmitStoreLocal(collectionInfo.DestinationLocal);
         }
 
-        private void SetCollectionMapperMapLocal(CollectionInfo collectionInfo)
+        void SetCollectionMapperMapLocal(CollectionInfo collectionInfo)
         {
-            if (Reflection.TypeInfo.IsBuiltIn(collectionInfo.SourceArgument))
+            if (MapperTypeInfo.IsBuiltIn(collectionInfo.SourceArgument))
                 return;
 
             collectionInfo.MapperMapMethodLocal = GetOrAddCollectionMapperMapLocal(collectionInfo.SourceArgument, collectionInfo.DestinationArgument);
@@ -383,14 +381,14 @@ namespace Statics.Mapper.Internal
             IL.EmitStoreLocal(collectionInfo.MapperMapMethodLocal);
         }
 
-        private void SetCollectionLocals(CollectionInfo collectionInfo)
+        void SetCollectionLocals(CollectionInfo collectionInfo)
         {
             SetCollectionSourceLocals(collectionInfo);
             SetCollectionDestinationLocals(collectionInfo);
             SetCollectionMapperMapLocal(collectionInfo);
         }
 
-        private void LoadCollectionElement(CollectionInfo collectionInfo)
+        void LoadCollectionElement(CollectionInfo collectionInfo)
         {
             if (collectionInfo.SourceLocalEnumerator == null)
             {
@@ -426,7 +424,7 @@ namespace Statics.Mapper.Internal
                     if (propertyInfo == null)
                         throw new NotSupportedException($"{nameof(LoadCollectionElement)} {nameof(source)} {nameof(propertyInfo)} cannot be determined");
 
-                    if (Reflection.TypeInfo.IsStatic(source) || source.IsValueType)
+                    if (MapperTypeInfo.IsStatic(source) || source.IsValueType)
                         IL.Emit(OpCodes.Call, propertyInfo.GetGetMethod());
                     else
                         IL.EmitCallMethod(propertyInfo.GetGetMethod());
@@ -439,7 +437,7 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void MapCollectionElement(CollectionInfo collectionInfo)
+        void MapCollectionElement(CollectionInfo collectionInfo)
         {
             if (collectionInfo.MapperMapMethodLocal != null)
                 IL.Emit(OpCodes.Callvirt, collectionInfo.MapperMapMethodLocal.LocalType.GetMethod(nameof(Func<Type>.Invoke)));
@@ -447,7 +445,7 @@ namespace Statics.Mapper.Internal
                 IL.EmitConvert(collectionInfo.SourceArgument, collectionInfo.DestinationArgument);
         }
 
-        private void StoreCollectionElement(CollectionInfo collectionInfo)
+        void StoreCollectionElement(CollectionInfo collectionInfo)
         {
             if (collectionInfo.DestinationLocal.LocalType.IsArray)
             {
@@ -458,7 +456,7 @@ namespace Statics.Mapper.Internal
             IL.EmitCallMethod(GetCollectionAddMethod(collectionInfo.DestinationLocal.LocalType));
         }
 
-        private void ConvertCollectionToArray(CollectionInfo collectionInfo)
+        void ConvertCollectionToArray(CollectionInfo collectionInfo)
         {
             Type destinationLocalType = collectionInfo.DestinationLocal.LocalType;
             MethodInfo methodInfo = destinationLocalType.GetMethods().FirstOrDefault(m =>
@@ -475,7 +473,7 @@ namespace Statics.Mapper.Internal
                 IsAssignableFrom(destinationLocalType, typeof(IProducerConsumerCollection<>)))
             {
                 IL.Emit(OpCodes.Call,
-                    typeof(Reflection.Emit.ILGenerator.Converters)
+                    typeof(IL)
                     .GetMethods()
                     .First(m =>
                         m.Name == ToArray &&
@@ -486,16 +484,16 @@ namespace Statics.Mapper.Internal
                                 (IsAssignableFrom(destinationLocalType, typeof(ICollection<>)) ?
                                     typeof(ICollection<>) :
                                     typeof(IProducerConsumerCollection<>))))
-                    .MakeGenericMethod(new Type[] { collectionInfo.SourceArgument }));
+                    .MakeGenericMethod([collectionInfo.SourceArgument]));
             }
             else
             {
                 IL.Emit(OpCodes.Call,
-                    typeof(Enumerable).GetMethod(ToArray).MakeGenericMethod(new Type[] { collectionInfo.SourceArgument }));
+                    typeof(Enumerable).GetMethod(ToArray).MakeGenericMethod([collectionInfo.SourceArgument]));
             }
         }
 
-        private static MethodInfo GetImmutableCreateRangeMethod(CollectionInfo collectionInfo)
+        static MethodInfo GetImmutableCreateRangeMethod(CollectionInfo collectionInfo)
         {
             MethodInfo method = ImmutableGenericCollectionBuilders
                 .First(t => t.GenericTypeDefinition == collectionInfo.DestinationType.GetGenericTypeDefinition())
@@ -511,20 +509,20 @@ namespace Statics.Mapper.Internal
             if (collectionInfo.DestinationType.GenericTypeArguments.Length == collectionInfo.DestinationLocal.LocalType.GenericTypeArguments.Length)
                 return method.MakeGenericMethod(collectionInfo.DestinationType.GenericTypeArguments);
             else
-                return method.MakeGenericMethod(new Type[]
-                {
+                return method.MakeGenericMethod(
+                [
                     collectionInfo.DestinationArgument.GenericTypeArguments[0],
                     collectionInfo.DestinationArgument.GenericTypeArguments[1]
-                });
+                ]);
         }
 
-        private void LoadImmutableEmpty(CollectionInfo collectionInfo) =>
+        void LoadImmutableEmpty(CollectionInfo collectionInfo) =>
             IL.Emit(OpCodes.Ldsfld, GetImmutableCreateRangeMethod(collectionInfo).ReturnType.GetField(nameof(ImmutableArray<Type>.Empty)));
 
-        private void CallImmutableCreateRange(CollectionInfo collectionInfo) =>
+        void CallImmutableCreateRange(CollectionInfo collectionInfo) =>
             IL.Emit(OpCodes.Call, GetImmutableCreateRangeMethod(collectionInfo));
 
-        private void StoreCollection(CollectionInfo collectionInfo)
+        void StoreCollection(CollectionInfo collectionInfo)
         {
             if (collectionInfo.DestinationNodeMember != null)
             {
@@ -554,7 +552,7 @@ namespace Statics.Mapper.Internal
                 return;
             }
 
-            Type destinationGenericTypeDefinition = collectionInfo.DestinationType.IsGenericType ?
+            Type? destinationGenericTypeDefinition = collectionInfo.DestinationType.IsGenericType ?
                 collectionInfo.DestinationType.GetGenericTypeDefinition() :
                 null;
 
@@ -629,11 +627,11 @@ namespace Statics.Mapper.Internal
                 IL.Emit(OpCodes.Ret);
 
             }
-            else if (collectionInfo.DestinationType.GetConstructor(new Type[] { typeof(IEnumerable<>).MakeGenericType(new Type[] { collectionInfo.DestinationArgument }) }) != null)
+            else if (collectionInfo.DestinationType.GetConstructor([typeof(IEnumerable<>).MakeGenericType([collectionInfo.DestinationArgument])]) != null)
             {
                 if (collectionInfo.DestinationNodeMember != null)
                 {
-                    IL.Emit(OpCodes.Newobj, collectionInfo.DestinationType.GetConstructor(new Type[] { typeof(IEnumerable<>).MakeGenericType(new Type[] { collectionInfo.DestinationArgument }) }));
+                    IL.Emit(OpCodes.Newobj, collectionInfo.DestinationType.GetConstructor([typeof(IEnumerable<>).MakeGenericType([collectionInfo.DestinationArgument])]));
                     IL.EmitSetMemberValue(collectionInfo.DestinationNodeMember.Info);
 
                     return;
@@ -646,7 +644,7 @@ namespace Statics.Mapper.Internal
             }
         }
 
-        private void MapCollectionArrayCopyTo(CollectionInfo collectionInfo)
+        void MapCollectionArrayCopyTo(CollectionInfo collectionInfo)
         {
             if (collectionInfo.DestinationNodeMember != null)
                 Load(
@@ -659,19 +657,19 @@ namespace Statics.Mapper.Internal
             IL.EmitLoadLocal(collectionInfo.DestinationLocal, false);
             IL.EmitLdc_I4(0);
             IL.EmitLoadLocal(collectionInfo.LoopLength, false);
-            IL.EmitCallMethod(typeof(Array).GetMethod(nameof(Array.Copy), new Type[]
-                {
+            IL.EmitCallMethod(typeof(Array).GetMethod(nameof(Array.Copy),
+                [
                     typeof(Array),
                     typeof(int),
                     typeof(Array),
                     typeof(int),
                     typeof(int)
-                }));
+                ]));
 
             StoreCollection(collectionInfo);
         }
 
-        private void MapCollectionLoopForEach(CollectionInfo collectionInfo)
+        void MapCollectionLoopForEach(CollectionInfo collectionInfo)
         {
             Label loopMoveNext = IL.DefineLabel();
             Label loopBody = IL.DefineLabel();
@@ -699,7 +697,7 @@ namespace Statics.Mapper.Internal
             StoreCollection(collectionInfo);
         }
 
-        private void MapCollectionLoopIndex(CollectionInfo collectionInfo)
+        void MapCollectionLoopIndex(CollectionInfo collectionInfo)
         {
             Label loopCompareIndex = IL.DefineLabel();
             Label loopBody = IL.DefineLabel();
@@ -732,7 +730,7 @@ namespace Statics.Mapper.Internal
             StoreCollection(collectionInfo);
         }
 
-        private void MapCollection(
+        void MapCollection(
             DestinationNode destinationNode,
             DestinationNodeMember destinationNodeMember)
         {

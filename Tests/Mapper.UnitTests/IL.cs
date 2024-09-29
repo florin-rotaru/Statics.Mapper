@@ -10,14 +10,14 @@ using Xunit;
 using Xunit.Abstractions;
 using static Statics.Compare.Members;
 
-namespace Playground.Tests
+namespace Mapper.UnitTests
 {
     [Collection(nameof(IL))]
-    public class IL
+    public partial class IL
     {
-        private readonly ITestOutputHelper Console;
+        readonly ITestOutputHelper Console;
 
-        private Fixture Fixture { get; }
+        Fixture Fixture { get; }
 
         public IL(ITestOutputHelper console)
         {
@@ -31,7 +31,10 @@ namespace Playground.Tests
             customization.Customize(Fixture);
         }
 
-        private void WriteLine(string method, Stopwatch stopwatch) =>
+        [GeneratedRegex("DeclareLocal")]
+        public static partial Regex DeclareLocalRegex();
+
+        void WriteLine(string method, Stopwatch stopwatch) =>
             Console.WriteLine("{0,-18};{1,-32}",
                 stopwatch.Elapsed,
                 method);
@@ -51,7 +54,7 @@ namespace Playground.Tests
 
             while (runs < 3)
             {
-                Stopwatch stopwatch = new Stopwatch();
+                Stopwatch stopwatch = new();
 
                 Console.WriteLine($" =======  Run: {runs}; Actions: {actions};  =======");
 
@@ -83,43 +86,46 @@ namespace Playground.Tests
 
             // expected set_N1 once
             il = Mapper<TC2C1C0_I0_Members, TC2SS1C0_I0_Members>.ViewActionRefIL();
-            Assert.True(Regex.Matches(il, "set_N1").Count == 1);
+            Assert.Equal(1, Regex.Matches(il, "set_N1").Count);
 
             // expected locals: 2
-            il = Mapper<TC1NS0_I3_Static_Members, TC1C0_I4_Static_Members>.ViewFuncIL(o => o.Ignore(i => i).Map("N0.Value.StringMember", "N0.StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 2);
+            il = Mapper<TC1NS0_I3_Static_Members, TC1C0_I4_Static_Members>.ViewIL(o => o.Ignore(i => i).Map("N0.Value.StringMember", "N0.StringMember"));
+            Assert.Equal(2, DeclareLocalRegex().Matches(il).Count);
 
             // expected locals: 1
             il = Mapper<TC1NS0_I3_Static_Members, TC1C0_I4_Static_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N0.Value.StringMember", "N0.StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 1);
+            Assert.Single(DeclareLocalRegex().Matches(il));
 
             // expected locals: 3
             il = Mapper<TC1NS0_I3_Static_Members, TC1NS0_I0_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N0.Value.StringMember", "N0.Value.StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 3);
+            Assert.Equal(3, DeclareLocalRegex().Matches(il).Count);
 
             // expected locals: 1
             il = Mapper<TS0_I3_Static_Members?, TS0_I0_Members?>.ViewActionRefIL(o => o.Ignore(i => i).Map("Value.StringMember", "StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 1);
+            Assert.Single(DeclareLocalRegex().Matches(il));
 
             // expected locals: 2
             il = Mapper<TC1NS0_I0_Members, TC1C0_I0_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N0.Value.StringMember", "N0.StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 2);
+            Assert.Equal(2, DeclareLocalRegex().Matches(il).Count);
 
             // expected locals: 4
             il = Mapper<TC2NS1NS0_I0_Members, TC2C1C0_I0_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N1.Value.N0.Value.StringMember", "N1.N0.StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 4);
+            Assert.Equal(4, DeclareLocalRegex().Matches(il).Count);
 
             // expected locals: 1
-            il = Mapper<TS2S1SC0_I0_Members, TC2C1C0_I0_Members>.ViewFuncIL(o => o.Ignore(i => i).Map("N1.N0.StringMember", "N1.N0.StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 1);
+            il = Mapper<TS2S1SC0_I0_Members, TC2C1C0_I0_Members>.ViewIL(o => o.Ignore(i => i).Map("N1.N0.StringMember", "N1.N0.StringMember"));
+            Assert.Single(DeclareLocalRegex().Matches(il));
 
             // expected locals: 2
             il = Mapper<TC2NS1C0_I2_Literal_Members, TC2C1C0_I0_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N1.Value.N0.StringMember", "N1.N0.StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 2);
+            Assert.Equal(2, DeclareLocalRegex().Matches(il).Count);
+
+            il = Mapper<TC2NS1C0_I2_Literal_Members, TC2C1C0_I0_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N1.Value.N0.StringMember", "N1.N0.StringMember"));
+            Assert.Equal(2, DeclareLocalRegex().Matches(il).Count);
 
             // expected locals: 4
             il = Mapper<TC2NS1C0_I0_Members, TC2NS1C0_I0_Members>.ViewActionRefIL(o => o.Ignore(i => i).Map("N1.Value.N0.StringMember", "N1.Value.N0.StringMember"));
-            Assert.True(Regex.Matches(il, "DeclareLocal").Count == 4);
+            Assert.Equal(4, DeclareLocalRegex().Matches(il).Count);
         }
 
         [Fact]
@@ -178,6 +184,5 @@ namespace Playground.Tests
             mapActionRef(source, ref destination);
             Assert.True(CompareEquals(source, destination));
         }
-
     }
 }

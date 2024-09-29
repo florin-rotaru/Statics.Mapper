@@ -70,7 +70,7 @@ namespace Models
 
     public class TEnumerable<T> : IEnumerable<T>
     {
-        private List<T> Collection { get; set; }
+        List<T> Collection { get; set; }
 
         public TEnumerable() { }
         public TEnumerable(IEnumerable<T> collection)
@@ -87,7 +87,7 @@ namespace Models
 
     public class TDictionary<T> : IDictionary<int, T>
     {
-        private Dictionary<int, T> Collection { get; set; } = new Dictionary<int, T>();
+        Dictionary<int, T> Collection { get; set; } = new Dictionary<int, T>();
 
         public TDictionary() { }
 

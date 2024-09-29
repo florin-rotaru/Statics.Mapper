@@ -1,5 +1,4 @@
 using AutoFixture;
-using Models;
 using Newtonsoft.Json;
 using Statics.Mapper;
 using System;
@@ -9,7 +8,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static Statics.Compare.Members;
 
-namespace Internal
+namespace Models.Internal
 {
     public class FromTo_N2<S> where S : new()
     {
@@ -23,7 +22,7 @@ namespace Internal
             Fixture = new Fixture();
         }
 
-        private S NewSource()
+        S NewSource()
         {
             var members = Fixture.Create<TC2C1C0_I0_Members>();
             var source = Mapper<TC2C1C0_I0_Members, S>.Map(members);
@@ -42,22 +41,22 @@ namespace Internal
             return source;
         }
 
-        private static S DefaultSource() => default;
+        static S DefaultSource() => default;
 
-        private static D NullableReadonly<D>()
+        static D NullableReadonly<D>()
         {
             return (D)Activator.CreateInstance(
                 typeof(D),
                 Activator.CreateInstance(Nullable.GetUnderlyingType(typeof(D))));
         }
 
-        private static bool CanSerialize<D>(S source, D destination)
+        static bool CanSerialize<D>(S source, D destination)
         {
             return JsonConvert.SerializeObject(source) != null &&
                 JsonConvert.SerializeObject(destination) != null;
         }
 
-        private static void AssertEqualsOrDefaultReadonly<D>(S source, D destination) where D : new()
+        static void AssertEqualsOrDefaultReadonly<D>(S source, D destination) where D : new()
         {
             Assert.True(CanSerialize(source, destination));
 
@@ -69,7 +68,7 @@ namespace Internal
                 Assert.True(CompareEquals(new D(), destination));
         }
 
-        private static void AssertEqualsOrDefault<D>(S source, D destination, bool hasReadonlyMembers) where D : new()
+        static void AssertEqualsOrDefault<D>(S source, D destination, bool hasReadonlyMembers) where D : new()
         {
             if (hasReadonlyMembers)
                 AssertEqualsOrDefaultReadonly(source, destination);
@@ -85,7 +84,7 @@ namespace Internal
                 Assert.True(CompareEquals(source, destination));
         }
 
-        private static void AssertDefaultReadonly<D>(S source, D destination) where D : new()
+        static void AssertDefaultReadonly<D>(S source, D destination) where D : new()
         {
             Assert.True(CanSerialize(source, destination));
 
@@ -118,7 +117,7 @@ namespace Internal
             }
         }
 
-        private static void AssertDefault<D>(S source, D destination, bool hasReadonlyMembers) where D : new()
+        static void AssertDefault<D>(S source, D destination, bool hasReadonlyMembers) where D : new()
         {
             if (hasReadonlyMembers)
                 AssertDefaultReadonly(source, destination);
@@ -152,7 +151,7 @@ namespace Internal
             }
         }
 
-        private static string GetStringMemberPath(Type type)
+        static string GetStringMemberPath(Type type)
         {
             var path = new List<string>();
             string[] members = new[] { "N1", "N0", "Value", "StringMember" };
@@ -167,7 +166,7 @@ namespace Internal
             return string.Join('.', path);
         }
 
-        private Statics.Reflection.MemberInfo GetMemberInfo(Type type)
+        Statics.Reflection.MemberInfo GetMemberInfo(Type type)
         {
             string[] members = new[] { "N1", "N0", "Value" };
             var memberInfo = Statics.Reflection.TypeInfo.GetMembers(type).FirstOrDefault(m => members.Contains(m.Name));
@@ -177,7 +176,7 @@ namespace Internal
             return memberInfo.Name == "Value" ? GetMemberInfo(memberInfo.Type) : memberInfo;
         }
 
-        private bool ContainsSameStaticNodes(Type source, Type destination)
+        bool ContainsSameStaticNodes(Type source, Type destination)
         {
             var sourceMember = GetMemberInfo(source);
             var destinationMember = GetMemberInfo(destination);
@@ -196,7 +195,7 @@ namespace Internal
             return false;
         }
 
-        private void StringMemberMap<D>(bool hasReadonlyMembers) where D : new()
+        void StringMemberMap<D>(bool hasReadonlyMembers) where D : new()
         {
             if (hasReadonlyMembers)
                 return;

@@ -9,12 +9,12 @@ using System.Linq;
 using Xunit;
 using static Statics.Compare.Members;
 
-namespace Playground.Tests
+namespace Mapper.UnitTests
 {
     [Collection(nameof(Collections))]
     public class Collections
     {
-        private Fixture Fixture { get; }
+        Fixture Fixture { get; }
 
         public Collections()
         {

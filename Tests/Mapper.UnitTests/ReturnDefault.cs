@@ -2,7 +2,7 @@
 using Models;
 using Xunit;
 
-namespace Playground.Tests
+namespace Mapper.UnitTests
 {
     [Collection(nameof(ReturnDefault))]
     public class ReturnDefault

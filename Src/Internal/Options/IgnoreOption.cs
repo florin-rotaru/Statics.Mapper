@@ -2,18 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Statics.Mapper.Internal
+namespace Statics.Mapper.Internal.Options
 {
-    internal class IgnoreOption
+    internal class IgnoreOption(IEnumerable<string> destinationMemberNames)
     {
-        public List<string> DestinationMemberNames { get; }
+        public List<string> DestinationMemberNames { get; } = destinationMemberNames.ToList();
 
-        public IgnoreOption(IEnumerable<string> destinationMemberNames) =>
-            DestinationMemberNames = destinationMemberNames.ToList();
+        public IgnoreOption(IMapperOptionArguments option) : this(option.Arguments.Select(s => (string)s).ToList()) { }
 
-        public IgnoreOption(IMapOption option) : this(option.Arguments.Select(s => (string)s).ToList()) { }
-
-        public IMapOption AsMapOption() =>
-            new Option(nameof(MapOptions<Type, Type>.Ignore), DestinationMemberNames.ToArray());
+        public IMapperOptionArguments AsMapOptionArguments() =>
+            new MapperOptionArguments(nameof(MapperMapOptions<Type, Type>.Ignore), [.. DestinationMemberNames]);
     }
 }

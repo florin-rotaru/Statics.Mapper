@@ -1,6 +1,6 @@
 ﻿namespace Statics.Mapper
 {
-    public interface IMapOption
+    public interface IMapperOptionArguments
     {
         string Name { get; }
         object[] Arguments { get; }

@@ -8,14 +8,14 @@ using Xunit;
 using Xunit.Abstractions;
 using static Statics.Compare.Members;
 
-namespace Playground.Tests
+namespace Mapper.UnitTests
 {
     [Collection(nameof(Options))]
     public class Options
     {
-        private readonly ITestOutputHelper Console;
+        readonly ITestOutputHelper Console;
 
-        private Fixture Fixture { get; }
+        Fixture Fixture { get; }
 
         public Options(ITestOutputHelper console)
         {

@@ -1,11 +1,11 @@
-using Internal;
 using Models;
+using Models.Internal;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace C2SC1SS0.Tests
 {
-	[Collection("S_C2SC1SS0")]
+    [Collection("S_C2SC1SS0")]
 	public class From_NS_C2SC1SS0_I0_Members : FromTo_N2_NonStatic_Members<TC2SC1SS0_I0_Members> { public From_NS_C2SC1SS0_I0_Members(ITestOutputHelper console) : base(console) {} }
 
 	[Collection("S_C2SC1SS0")]
