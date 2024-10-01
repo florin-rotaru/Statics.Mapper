@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Statics.Mapper.Internal;
+using Statics.Mapper.Internal.Options;
 
-namespace Statics.Mapper.Internal.Options
+namespace Statics.Mapper
 {
     public class MapperMapOptions<S, D>
     {
@@ -14,16 +16,16 @@ namespace Statics.Mapper.Internal.Options
         {
             Expression expressionBody = destination.Body;
             if (expressionBody is NewExpression)
-                MapOptionArguments.Add(new MapperOptionArguments(nameof(Ignore), [.. Expressions.GetNames(destination, true)]));
+                MapOptionArguments.Add(new MapperOptionArguments(nameof(IgnoreOption), [.. Expressions.GetNames(destination, true)]));
             else
-                MapOptionArguments.Add(new MapperOptionArguments(nameof(Ignore), [Expressions.GetName(destination, true)]));
+                MapOptionArguments.Add(new MapperOptionArguments(nameof(IgnoreOption), [Expressions.GetName(destination, true)]));
 
             return this;
         }
 
         public MapperMapOptions<S, D> Ignore(params string[] destination)
         {
-            MapOptionArguments.Add(new MapperOptionArguments(nameof(Ignore), destination));
+            MapOptionArguments.Add(new MapperOptionArguments(nameof(IgnoreOption), destination));
             return this;
         }
 
@@ -33,7 +35,7 @@ namespace Statics.Mapper.Internal.Options
             bool expand = true,
             bool useMapperConfig = true)
         {
-            MapOptionArguments.Add(new MapperOptionArguments(nameof(Map), [source, destination, expand, useMapperConfig]));
+            MapOptionArguments.Add(new MapperOptionArguments(nameof(MapOption), [source, destination, expand, useMapperConfig]));
             return this;
         }
 
@@ -43,5 +45,22 @@ namespace Statics.Mapper.Internal.Options
             bool expand = true,
             bool useMapperConfig = true) =>
             Map(Expressions.GetName(source, true), Expressions.GetName(destination, true), expand, useMapperConfig);
+
+        public MapperMapOptions<S, D> MapAs(
+            string destination,
+            Type @as,
+            bool expand = true,
+            bool useMapperConfig = true)
+        {
+            MapOptionArguments.Add(new MapperOptionArguments(nameof(MapAsOption), [destination, @as, expand, useMapperConfig]));
+            return this;
+        }
+
+        public MapperMapOptions<S, D> MapAs(
+            Expression<Func<D, object>> destination,
+            Type @as,
+            bool expand = true,
+            bool useMapperConfig = true) =>
+            MapAs(Expressions.GetName(destination, true), @as, expand, useMapperConfig);
     }
 }

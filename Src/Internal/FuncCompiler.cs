@@ -40,7 +40,7 @@ namespace Statics.Mapper.Internal
             MapSourceNodes(Schema.SourceRootNode);
 
             if (Schema.DestinationRootNode.NullableUnderlyingType == null &&
-                Schema.DestinationNodes.Any(node => node.Load && node.Depth != 0))
+                Schema.DestinationNodes.Exists(node => node.Load && node.Depth != 0))
                 InitIfNull(Schema.DestinationRootNode);
 
             ReturnDestinationRootNode();

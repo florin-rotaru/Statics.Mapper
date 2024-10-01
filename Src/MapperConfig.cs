@@ -1,5 +1,4 @@
-﻿using Statics.Mapper.Internal.Options;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Statics.Mapper
@@ -9,15 +8,19 @@ namespace Statics.Mapper
         internal static List<IMapperOptionArguments> Options { get; set; } = [];
         internal static bool UsePredefinedMap { get; set; }
 
-        public static List<IMapperOptionArguments> GetOptions() => Options;
+        public static List<IMapperOptionArguments> GetOptions() => new(Options);
+        static void SetOptions(List<IMapperOptionArguments> options) => Options = new(options);
         public static void SetOptions(Action<MapperMapOptions<S, D>> options, bool overwrite = false)
         {
-            if (Options != null && !overwrite)
+            if (Options.Count != 0 && !overwrite)
                 throw new InvalidOperationException($"{nameof(Options)} for {typeof(S).Name} and {typeof(D).Name} already set!");
 
             MapperMapOptions<S, D> mapOptions = new();
             options.Invoke(mapOptions);
-            Options = mapOptions.GetMapOptionArguments();
+            SetOptions(mapOptions.GetMapOptionArguments());
+
+            Mapper<S, D>.CompiledFunc = Mapper<S, D>.CompilerCompileFunc(GetOptions());
+            Mapper<S, D>.CompiledActionRef = Mapper<S, D>.CompilerCompileActionRef(GetOptions());
         }
 
         public static void SetMap(Func<S, D> func, Mapper<S, D>.ActionRef actionRef)
@@ -35,8 +38,8 @@ namespace Statics.Mapper
         {
             UsePredefinedMap = false;
 
-            Mapper<S, D>.CompiledFunc = Mapper<S, D>.CompileFunc();
-            Mapper<S, D>.CompiledActionRef = Mapper<S, D>.CompileActionRef();
+            Mapper<S, D>.CompiledFunc = Mapper<S, D>.CompilerCompileFunc(GetOptions());
+            Mapper<S, D>.CompiledActionRef = Mapper<S, D>.CompilerCompileActionRef(GetOptions());
         }
     }
 }

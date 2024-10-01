@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Statics.Mapper.Internal.Options;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -29,8 +30,12 @@ namespace Statics.Mapper.Internal
 
         protected void Evaluate()
         {
-            if (!Schema.CanMapTypes(SourceType, DestinationType))
-                throw new NotSupportedException($"Mapping from {SourceType} to {DestinationType} not supported.");
+            IMapperOptionArguments? mapDestinationTypeAs = MapOptions?.Where(o => o.Name == nameof(MapAsOption) && new MapAsOption(o).DestinationMemberName == string.Empty).LastOrDefault();
+            if (mapDestinationTypeAs != null)
+                DestinationType = new MapAsOption(mapDestinationTypeAs).Implementation;
+
+            if (!Schema.CanMapTypes(SourceType, DestinationType, MapOptions))
+                throw new NotSupportedException($"Mapping from {SourceType.Name} to {DestinationType.Name} not supported.");
         }
 
         #region Schema
@@ -433,7 +438,7 @@ namespace Statics.Mapper.Internal
             }
 
             if (destinationNode.NullableUnderlyingType != null && !destinationNode.UseMapper)
-                IL.Emit(OpCodes.Newobj, destinationNode.Type.GetConstructor(new Type[] { destinationNode.NullableUnderlyingType }));
+                IL.Emit(OpCodes.Newobj, destinationNode.Type.GetConstructor([destinationNode.NullableUnderlyingType]));
 
             IL.EmitSetMemberValue(destinationNode.Member);
         }
@@ -517,10 +522,10 @@ namespace Statics.Mapper.Internal
             if (!sourceNode.Load)
                 return false;
 
-            return Schema.DestinationNodes.Any(n =>
+            return Schema.DestinationNodes.Exists(n =>
                 n.Load &&
                 n.MembersMapCount != 0 &&
-                n.Members.Any(m => m.Map && m.SourceNode.Name == sourceNode.Name));
+                n.Members.Exists(m => m.Map && m.SourceNode.Name == sourceNode.Name));
         }
 
         protected bool MapsNodesMembers(SourceNode sourceNode)
@@ -530,10 +535,10 @@ namespace Statics.Mapper.Internal
 
             List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, n => n.Load, 0);
 
-            return Schema.DestinationNodes.Any(n =>
+            return Schema.DestinationNodes.Exists(n =>
                 n.Load &&
                 (
-                    (n.MembersMapCount != 0 && n.Members.Any(
+                    (n.MembersMapCount != 0 && n.Members.Exists(
                         m => m.Map &&
                         (
                             m.SourceNode.Name == sourceNode.Name ||
@@ -549,9 +554,9 @@ namespace Statics.Mapper.Internal
             List<SourceNode> childNodes = Schema.GetChildNodes(sourceNode, (n) => n.Load, 1);
 
             return childNodes.Exists(n => !n.IsStatic) ||
-                Schema.DestinationNodes.Any(n =>
+                Schema.DestinationNodes.Exists(n =>
                     n.Load &&
-                    n.MembersMapCount != 0 && n.Members.Any(m =>
+                    n.MembersMapCount != 0 && n.Members.Exists(m =>
                         m.Map &&
                         m.SourceNode.Name == sourceNode.Name &&
                         !m.SourceNodeMember.IsStatic));

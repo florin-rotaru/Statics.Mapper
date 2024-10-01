@@ -373,7 +373,7 @@ namespace Statics.Mapper.Internal
             collectionInfo.MapperMapMethodLocal = GetOrAddCollectionMapperMapLocal(collectionInfo.SourceArgument, collectionInfo.DestinationArgument);
 
             MethodInfo compiledMapperMethod = typeof(Mapper<,>)
-                .MakeGenericType(new[] { collectionInfo.SourceArgument, collectionInfo.DestinationArgument })
+                .MakeGenericType([collectionInfo.SourceArgument, collectionInfo.DestinationArgument])
                 .GetProperty(nameof(Mapper<Type, Type>.CompiledFunc))
                 .GetGetMethod();
 

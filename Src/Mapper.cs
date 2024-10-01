@@ -1,5 +1,4 @@
 ﻿using Statics.Mapper.Internal;
-using Statics.Mapper.Internal.Options;
 using System;
 using System.Collections.Generic;
 
@@ -8,6 +7,30 @@ namespace Statics.Mapper
     public static partial class Mapper<S, D>
     {
         public delegate void ActionRef(S source, ref D destination);
+
+        static Func<S, D>? _compiledFunc { get; set; }
+        public static Func<S, D> CompiledFunc
+        {
+            get
+            {
+                _compiledFunc ??= CompilerCompileFunc(MapperConfig<S, D>.GetOptions());
+                return _compiledFunc!;
+            }
+            internal set
+            { _compiledFunc = value; }
+        }
+
+        internal static ActionRef? _compiledActionRef { get; set; }
+        public static ActionRef CompiledActionRef
+        {
+            get
+            {
+                _compiledActionRef ??= CompilerCompileActionRef(MapperConfig<S, D>.GetOptions());
+                return _compiledActionRef;
+            }
+            internal set
+            { _compiledActionRef = value; }
+        }
 
         static List<IMapperOptionArguments> ParseMapOptions(Action<MapperMapOptions<S, D>>? mapOptions = null)
         {
@@ -27,8 +50,7 @@ namespace Statics.Mapper
                 .Compile(mapOptions)
                 .CreateDelegate(typeof(ActionRef));
 
-        public static Func<S, D> CompiledFunc { get; internal set; } = CompilerCompileFunc(MapperConfig<S, D>.GetOptions());
-        public static ActionRef CompiledActionRef { get; internal set; } = CompilerCompileActionRef(MapperConfig<S, D>.GetOptions());
+
 
         /// <summary>
         /// Compiles map Func

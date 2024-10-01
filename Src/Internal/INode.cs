@@ -7,7 +7,7 @@ namespace Statics.Mapper.Internal
     {
         string Name { get; }
         int Depth { get; }
-        Type Type { get; }
+        Type Type { get; set; }
         bool IsStatic { get; }
         Type? NullableUnderlyingType { get; }
         LocalBuilder? Local { get; set; }

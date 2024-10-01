@@ -9,7 +9,7 @@ namespace Statics.Mapper.Internal
     {
         public string Name { get; }
         public int Depth { get; }
-        public Type Type { get; }
+        public Type Type { get; set; }
         public bool IsStatic { get; }
         public Type? TypeAdapter { get; }
         public Type? NullableUnderlyingType { get; }

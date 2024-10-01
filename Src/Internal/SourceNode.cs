@@ -8,7 +8,7 @@ namespace Statics.Mapper.Internal
     {
         public string Name { get; } = node.Name;
         public int Depth { get; } = node.Depth;
-        public Type Type { get; } = node.Type;
+        public Type Type { get; set; } = node.Type;
         public bool IsStatic { get; } = node.IsStatic;
         public Type? NullableUnderlyingType { get; } = node.NullableUnderlyingType;
         public LocalBuilder? Local { get; set; }

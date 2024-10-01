@@ -29,8 +29,13 @@ namespace Statics.Mapper.Internal
             });
 
             DestinationNodes = GetNodes(destination, (node) =>
-                (node.MemberOf.IsGenericType && TypeAdapters.ContainsAdapterGenericTypeDefinition(node.MemberOf.GetGenericTypeDefinition())) ||
-                (node.HasSetMethod && (node.HasDefaultConstructor || node.Type.IsValueType))
+                node.HasSetMethod
+            //(node.MemberOf.IsGenericType && TypeAdapters.ContainsAdapterGenericTypeDefinition(node.MemberOf.GetGenericTypeDefinition()))
+
+            //(node.HasSetMethod && (
+            //    (mapOptions?.Exists(o => o.Name == nameof(MapAsOption) && new MapAsOption(o).DestinationMemberName == node.Name) ?? false) ||
+            //    node.HasDefaultConstructor || 
+            //    node.Type.IsValueType))
             )
             .Select(s => new DestinationNode(s)).ToList();
 
@@ -60,7 +65,7 @@ namespace Statics.Mapper.Internal
             {
                 if (!withRootOption)
                     Map(SourceRootNode, DestinationRootNode, true, true);
-
+                
                 ApplyOptions(options);
             }
         }
@@ -80,11 +85,14 @@ namespace Statics.Mapper.Internal
                 return;
             }
 
-            outMapOptions = new List<IMapperOptionArguments>(mapOptions);
+            outMapOptions = mapOptions;
+
+            List<IMapperOptionArguments> mapAsOptions = 
+                outMapOptions.FindAll(o => o.Name == nameof(MapAsOption));
 
             int optionIndex = outMapOptions.FindLastIndex(o =>
                 GetDestinationMemberName(o).Count == 0 &&
-                o.Name == nameof(MapperMapOptions<Type, Type>.Ignore));
+                o.Name == nameof(IgnoreOption));
 
             if (optionIndex != -1)
             {
@@ -94,7 +102,7 @@ namespace Statics.Mapper.Internal
 
             optionIndex = outMapOptions.FindLastIndex(o =>
                 GetDestinationMemberName(o).Count == 0 &&
-                o.Name == nameof(MapperMapOptions<Type, Type>.Map));
+                o.Name == nameof(MapOption));
 
             if (optionIndex != -1)
             {
@@ -102,37 +110,47 @@ namespace Statics.Mapper.Internal
                 withRootOption = true;
             }
 
+            outMapOptions = [.. mapAsOptions, .. outMapOptions];
+
             for (int i = 0; i < outMapOptions.Count; i++)
             {
                 switch (outMapOptions[i].Name)
                 {
-                    case nameof(MapperMapOptions<Type, Type>.Ignore):
+                    case nameof(IgnoreOption):
                         {
                             if (destinationNode.Depth != 0)
                             {
                                 IgnoreOption ignoreOption = new(outMapOptions[i]);
-                                outMapOptions[i] = new IgnoreOption(
-                                    destinationNode.Depth != 0 ?
-                                    [string.Concat(destinationNode.Name, DOT, ignoreOption.DestinationMemberNames)] :
-                                    ignoreOption.DestinationMemberNames).AsMapOptionArguments();
+                                outMapOptions[i] = new IgnoreOption([string.Concat(destinationNode.Name, DOT, ignoreOption.DestinationMemberNames)])
+                                    .AsMapOptionArguments();
                             }
                         }
                         break;
-                    case nameof(MapperMapOptions<Type, Type>.Map):
+                    case nameof(MapOption):
                         {
                             if (sourceNode.Depth != 0 || destinationNode.Depth != 0)
                             {
                                 MapOption mapOption = new(outMapOptions[i]);
                                 outMapOptions[i] = new MapOption(
-                                    sourceNode.Depth != 0 ?
-                                    string.Concat(sourceNode.Name, DOT, mapOption.SourceMemberName) :
-                                    mapOption.SourceMemberName,
-                                    destinationNode.Depth != 0 ?
-                                    string.Concat(destinationNode.Name, DOT, mapOption.DestinationMemberName) :
-                                    mapOption.DestinationMemberName,
+                                    sourceNode.Depth != 0
+                                    ? string.Concat(sourceNode.Name, DOT, mapOption.SourceMemberName)
+                                    : mapOption.SourceMemberName,
+                                    destinationNode.Depth != 0
+                                    ? string.Concat(destinationNode.Name, DOT, mapOption.DestinationMemberName)
+                                    : mapOption.DestinationMemberName,
                                     mapOption.Expand,
                                     mapOption.UseMapperConfig).AsMapOptionArguments();
                             }
+                        }
+                        break;
+                    case nameof(MapAsOption):
+                        {
+                            MapAsOption mapAsOption = new(outMapOptions[i]);
+                            outMapOptions[i] = new MapAsOption(
+                                destinationNode.Depth != 0
+                                ? string.Concat(destinationNode.Name, string.IsNullOrEmpty(mapAsOption.DestinationMemberName) ? string.Empty : DOT, mapAsOption.DestinationMemberName)
+                                : mapAsOption.DestinationMemberName,
+                                mapAsOption.Implementation).AsMapOptionArguments();
                         }
                         break;
                     default:
@@ -154,34 +172,46 @@ namespace Statics.Mapper.Internal
         {
             return option.Name switch
             {
-                nameof(MapperMapOptions<Type, Type>.Ignore) => new IgnoreOption(option).DestinationMemberNames,
-                nameof(MapperMapOptions<Type, Type>.Map) => [new MapOption(option).DestinationMemberName],
+                nameof(IgnoreOption) => new IgnoreOption(option).DestinationMemberNames,
+                nameof(MapOption) => [new MapOption(option).DestinationMemberName],
+                nameof(MapAsOption) => [new MapAsOption(option).DestinationMemberName],
                 _ => throw new NotImplementedException()
             };
         }
 
         void ApplyOptions(List<IMapperOptionArguments> options)
         {
+            IEnumerable<IMapperOptionArguments> mapAsOptions = options.Where(o => o.Name == nameof(MapAsOption));
+            foreach (var mapAsOption in mapAsOptions)
+                ApplyMapAsOption(mapAsOption);
+
             foreach (IMapperOptionArguments option in options)
             {
                 switch (option.Name)
                 {
-                    case nameof(MapperMapOptions<Type, Type>.Ignore):
+                    case nameof(IgnoreOption):
                         ApplyIgnoreOption(option);
                         break;
-                    case nameof(MapperMapOptions<Type, Type>.Map):
-                        ApplyMapOption(option);
+                    case nameof(MapOption):
+                        ApplyMapOption(option, options);
                         break;
+                    case nameof(MapAsOption): break;
                     default:
                         throw new NotImplementedException($"Option {option.Name} not implemented!");
                 }
             }
         }
 
-        void ApplyMapOption(IMapperOptionArguments option)
+        void ApplyMapAsOption(IMapperOptionArguments option)
+        {
+            MapAsOption mapOption = new(option);
+            ApplyMapAsOption(mapOption.DestinationMemberName, mapOption.Implementation);
+        }
+
+        void ApplyMapOption(IMapperOptionArguments option, List<IMapperOptionArguments> options)
         {
             MapOption mapOption = new(option);
-            ApplyMapOption(mapOption.SourceMemberName, mapOption.DestinationMemberName, mapOption.Expand, mapOption.UseMapperConfig);
+            ApplyMapOption(mapOption.SourceMemberName, mapOption.DestinationMemberName, mapOption.Expand, mapOption.UseMapperConfig, options);
         }
 
 #pragma warning disable CS8605 // Unboxing a possibly null value.
@@ -227,8 +257,6 @@ namespace Statics.Mapper.Internal
             List<IMapperOptionArguments> options = [];
             bool withRootOption = false;
 
-            var test = GetMapperConfigOptions(sourceNode, destinationNode);
-
             if (useMapperConfig)
                 AdaptMapperConfigOptions(
                     sourceNode,
@@ -236,8 +264,6 @@ namespace Statics.Mapper.Internal
                     GetMapperConfigOptions(sourceNode, destinationNode),
                     out options,
                     out withRootOption);
-
-            options ??= [];
 
             foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
             {
@@ -262,7 +288,7 @@ namespace Statics.Mapper.Internal
                     (sourceNodeMember.Type.IsInterface || sourceNodeMember.Type.IsAbstract) &&
                     (destinationNodeMember.Info.Type.IsInterface || destinationNodeMember.Info.Type.IsAbstract))
                 {
-                    TryMapMember(sourceNode, sourceNodeMember, destinationNode, destinationNodeMember);
+                    TryMapMember(sourceNode, sourceNodeMember, destinationNode, destinationNodeMember, options);
                 }
                 else if (IsSourceNode(NodeMemberName(sourceNode.Name, sourceNodeMember.Name)) &&
                     IsDestinationNode(NodeMemberName(destinationNode.Name, destinationNodeMember.Info.Name)))
@@ -275,7 +301,7 @@ namespace Statics.Mapper.Internal
                 }
                 else
                 {
-                    TryMapMember(sourceNode, sourceNodeMember, destinationNode, destinationNodeMember);
+                    TryMapMember(sourceNode, sourceNodeMember, destinationNode, destinationNodeMember, options);
                 }
             }
 
@@ -313,7 +339,29 @@ namespace Statics.Mapper.Internal
             return true;
         }
 
-        public void ApplyMapOption(string sourceMember, string destinationMember, bool expand, bool useMapperConfig)
+        public void ApplyMapAsOption(string destinationMember, Type implementation)
+        {
+            destinationMember = ResolveDestinationMemberName(destinationMember);
+            DestinationNode destinationNode = DestinationNodes.FirstOrDefault(w => w.Name == destinationMember)
+                ?? throw new InvalidOperationException($"{destinationMember} has to be a node");
+
+            if (!implementation.IsAssignableTo(destinationNode.Type))
+                throw new InvalidOperationException($"{implementation.Name} is not assignable to {destinationNode.Type.Name}");
+            if (implementation.GetConstructor(Type.EmptyTypes) == null)
+                throw new InvalidOperationException($"{implementation.Name} has to have a default constructor");
+
+            destinationNode.Type = implementation;
+
+            SetUseMapper(destinationNode, false);
+            OnChange();
+        }
+
+        public void ApplyMapOption(
+            string sourceMember,
+            string destinationMember,
+            bool expand,
+            bool useMapperConfig,
+            List<IMapperOptionArguments> options)
         {
             sourceMember = ResolveSourceMemberName(sourceMember);
             destinationMember = ResolveDestinationMemberName(destinationMember);
@@ -326,10 +374,10 @@ namespace Statics.Mapper.Internal
             DestinationNode? destinationNode;
             DestinationNodeMember? destinationNodeMember = null;
 
-            InvalidOperationException mapeException = new($"Cannot map from {sourceMember} to {destinationMember}.");
+            InvalidOperationException mapException = new($"Cannot map from {sourceMember} to {destinationMember}.");
 
             if (sourceMemberIsNode != destinationMemberIsNode)
-                throw new InvalidOperationException();
+                throw mapException;
 
             if (sourceMemberIsNode)
             {
@@ -337,7 +385,7 @@ namespace Statics.Mapper.Internal
                 destinationNode = DestinationNodes.First(w => w.Name == destinationMember);
 
                 if (!EvaluateMap(sourceNode, destinationNode))
-                    throw mapeException;
+                    throw mapException;
 
                 Map(sourceNode, destinationNode, expand, useMapperConfig);
                 OnChange();
@@ -355,16 +403,17 @@ namespace Statics.Mapper.Internal
                 sourceNodeMember == null ||
                 destinationNode == null ||
                 destinationNodeMember == null)
-                throw mapeException;
+                throw mapException;
 
             if (!EvaluateMap(sourceNode, destinationNode))
-                throw mapeException;
+                throw mapException;
 
             if (!TryMapMember(
                 sourceNode,
                 sourceNodeMember,
                 destinationNode,
-                destinationNodeMember))
+                destinationNodeMember,
+                options))
                 throw new InvalidOperationException($"Cannot map from {sourceMember} to {destinationMember}.");
 
             SetUseMapper(destinationNode, false);
@@ -378,9 +427,9 @@ namespace Statics.Mapper.Internal
             foreach (DestinationNodeMember destinationNodeMember in destinationNode.Members)
                 destinationNodeMember.Map = false;
 
-            IEnumerable<DestinationNode> childNodes = GetChildNodes(destinationNode, childNode => childNode.Load);
+            List<DestinationNode> childNodes = GetChildNodes(destinationNode, childNode => childNode.Load);
 
-            if (!childNodes.Any())
+            if (childNodes.Count == 0)
                 SetUseMapper(destinationNode, false);
 
             foreach (DestinationNode childNode in childNodes)
@@ -469,7 +518,8 @@ namespace Statics.Mapper.Internal
 
         static bool CanMapCollection(
             Type sourceType,
-            Type destinationType)
+            Type destinationType,
+            List<IMapperOptionArguments> options)
         {
             if (IsCollection(sourceType) !=
                 IsCollection(destinationType))
@@ -486,16 +536,18 @@ namespace Statics.Mapper.Internal
 
             return CanMapTypes(
                 GetIEnumerableArgument(sourceType),
-                GetIEnumerableArgument(destinationType));
+                GetIEnumerableArgument(destinationType),
+                options);
         }
 
         public static bool CanMapTypes(
            Type sourceType,
-           Type destinationType)
+           Type destinationType,
+           List<IMapperOptionArguments> options)
         {
             if (IsCollection(sourceType) ||
                 IsCollection(destinationType))
-                return CanMapCollection(sourceType, destinationType);
+                return CanMapCollection(sourceType, destinationType, options);
 
             if (destinationType.IsInterface || destinationType.IsAbstract)
                 return sourceType == destinationType;
@@ -508,20 +560,22 @@ namespace Statics.Mapper.Internal
 
         public static bool CanLoadAndSetCollection(
             MapperTypeMemberInfo sourceMember,
-            MapperTypeMemberInfo destinationMember)
+            MapperTypeMemberInfo destinationMember,
+            List<IMapperOptionArguments> options)
         {
             if (!(sourceMember.HasGetMethod &&
                 destinationMember.HasSetMethod))
                 return false;
 
-            return CanMapCollection(sourceMember.Type, destinationMember.Type);
+            return CanMapCollection(sourceMember.Type, destinationMember.Type, options);
         }
 
         bool TryMapMember(
             SourceNode sourceNode,
             MapperTypeMemberInfo sourceNodeMember,
             DestinationNode destinationNode,
-            DestinationNodeMember destinationNodeMember)
+            DestinationNodeMember destinationNodeMember,
+            List<IMapperOptionArguments> options)
         {
             destinationNodeMember.SourceNode = sourceNode;
             destinationNodeMember.SourceNodeMember = sourceNodeMember;
@@ -530,7 +584,7 @@ namespace Statics.Mapper.Internal
 
             destinationNodeMember.Map = !destinationNodeMember.IsCollection ?
                 IL.CanEmitLoadAndSetValue(sourceNodeMember, destinationNodeMember.Info) :
-                CanLoadAndSetCollection(sourceNodeMember, destinationNodeMember.Info);
+                CanLoadAndSetCollection(sourceNodeMember, destinationNodeMember.Info, options);
 
             if (destinationNodeMember.Map)
             {
@@ -669,10 +723,10 @@ namespace Statics.Mapper.Internal
         }
 
         bool IsSourceNode(string memberName) =>
-            memberName == string.Empty || SourceNodes.Any(n => n.Name == memberName);
+            memberName == string.Empty || SourceNodes.Exists(n => n.Name == memberName);
 
         bool IsDestinationNode(string memberName) =>
-            memberName == string.Empty || DestinationNodes.Any(n => n.Name == memberName);
+            memberName == string.Empty || DestinationNodes.Exists(n => n.Name == memberName);
 
         public static IEnumerable<DestinationNodeMember> GetDestinationNodeMembers(DestinationNode destinationNode, Func<DestinationNodeMember, bool> predicate) =>
             destinationNode.Members.Where(predicate);

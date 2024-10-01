@@ -31,8 +31,8 @@ namespace Statics.Mapper.Internal
             public Type BuilderGenericTypeDefinition { get; } = builderGenericTypeDefinition;
         }
 
-        public static IEnumerable<MaintainableCollectionInfo> MaintainableGenericCollections { get; } = new List<MaintainableCollectionInfo>()
-        {
+        public static List<MaintainableCollectionInfo> MaintainableGenericCollections { get; } =
+        [
             new MaintainableCollectionInfo(typeof(IImmutableList<>), typeof(List<>)),
             new MaintainableCollectionInfo(typeof(IImmutableDictionary<,>), typeof(List<>)),
             new MaintainableCollectionInfo(typeof(IImmutableSet<>),typeof(List<>)),
@@ -69,10 +69,10 @@ namespace Statics.Mapper.Internal
             new MaintainableCollectionInfo(typeof(ImmutableSortedDictionary<,>), typeof(List<>)),
             new MaintainableCollectionInfo(typeof(ImmutableSortedSet<>), typeof(List<>)),
             new MaintainableCollectionInfo(typeof(ImmutableStack<>), typeof(List<>))
-        };
+        ];
 
-        public static IEnumerable<ImmutableCollectionBuilderInfo> ImmutableGenericCollectionBuilders { get; } = new List<ImmutableCollectionBuilderInfo>()
-        {
+        public static List<ImmutableCollectionBuilderInfo> ImmutableGenericCollectionBuilders { get; } =
+        [
             new ImmutableCollectionBuilderInfo(typeof(IImmutableList<>), typeof(ImmutableList)),
             new ImmutableCollectionBuilderInfo(typeof(IImmutableDictionary<,>), typeof(ImmutableDictionary)),
             new ImmutableCollectionBuilderInfo(typeof(IImmutableSet<>), typeof(ImmutableHashSet)),
@@ -86,7 +86,7 @@ namespace Statics.Mapper.Internal
             new ImmutableCollectionBuilderInfo(typeof(ImmutableSortedDictionary<,>), typeof(ImmutableSortedDictionary)),
             new ImmutableCollectionBuilderInfo(typeof(ImmutableSortedSet<>), typeof(ImmutableSortedSet)),
             new ImmutableCollectionBuilderInfo(typeof(ImmutableStack<>), typeof(ImmutableStack))
-        };
+        ];
 
         public static bool IsImmutable(Type genericTypeDefinition)
         {
@@ -229,7 +229,7 @@ namespace Statics.Mapper.Internal
             }
             else if (destinationGenericTypeDefinition != null &&
                 IsImmutable(destinationGenericTypeDefinition) &&
-                MaintainableGenericCollections.Any(s => s.GenericTypeDefinition == destinationGenericTypeDefinition))
+                MaintainableGenericCollections.Exists(s => s.GenericTypeDefinition == destinationGenericTypeDefinition))
             {
                 localType = MakeLocalGenericType(destinationType, MaintainableGenericCollections.First(t => t.GenericTypeDefinition == destinationGenericTypeDefinition));
             }

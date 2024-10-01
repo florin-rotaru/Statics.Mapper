@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Statics.Mapper.Internal.Options
+﻿namespace Statics.Mapper.Internal.Options
 {
     internal class MapOption(
         string sourceMemberName,
@@ -22,7 +20,7 @@ namespace Statics.Mapper.Internal.Options
 
         public IMapperOptionArguments AsMapOptionArguments() =>
             new MapperOptionArguments(
-                nameof(MapperMapOptions<Type, Type>.Map),
+                nameof(MapOption),
                 [
                     SourceMemberName,
                     DestinationMemberName,

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace Statics.Mapper.Internal.Options
@@ -11,6 +10,6 @@ namespace Statics.Mapper.Internal.Options
         public IgnoreOption(IMapperOptionArguments option) : this(option.Arguments.Select(s => (string)s).ToList()) { }
 
         public IMapperOptionArguments AsMapOptionArguments() =>
-            new MapperOptionArguments(nameof(MapperMapOptions<Type, Type>.Ignore), [.. DestinationMemberNames]);
+            new MapperOptionArguments(nameof(IgnoreOption), [.. DestinationMemberNames]);
     }
 }
