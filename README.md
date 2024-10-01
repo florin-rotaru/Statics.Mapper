@@ -40,13 +40,21 @@ Setting map option
 ```csharp
 var mapFunction = Mapper<TSource, TDestination>.CompileFunc(o => o
   .Ignore(i => i.DestinationMember)
+  .MapAs(d => d.InterfaceMember, typeof(Implementation))
   .Map(s => s.SourceMember, d => d.DestinationMember));
+
+var mapFunction = Mapper<TSource, IDestination>.CompileFunc(o => o
+  .MapAs(d => d, typeof(Destination)));
 ```
 or
 ```csharp
 MapperConfig<TSource, TDestination>.SetOptions(o => o
   .Ignore(i => i.DestinationMember)
+  .MapAs(d => d.InterfaceMember, typeof(Implementation))
   .Map(s => s.SourceMember, d => d.DestinationMember));
+
+MapperConfig<TSource, IDestination>.SetOptions(o => o
+  .MapAs(d => d, typeof(Destination)));
 ```
 
 ### Default Map Options
