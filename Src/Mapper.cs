@@ -50,8 +50,6 @@ namespace Statics.Mapper
                 .Compile(mapOptions)
                 .CreateDelegate(typeof(ActionRef));
 
-
-
         /// <summary>
         /// Compiles map Func
         /// </summary>
